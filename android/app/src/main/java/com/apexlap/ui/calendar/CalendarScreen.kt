@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -54,6 +55,7 @@ import java.time.Instant
 fun CalendarScreen(
     onRaceClick: (Race) -> Unit,
     onRemindersClick: () -> Unit,
+    onEncyclopediaClick: () -> Unit,
     viewModel: CalendarViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -70,6 +72,9 @@ fun CalendarScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text("SAISON ${state.season}", style = MaterialTheme.typography.displaySmall, modifier = Modifier.weight(1f))
+                        IconButton(onClick = onEncyclopediaClick) {
+                            Icon(Icons.Outlined.MenuBook, contentDescription = "Encyclopédie")
+                        }
                         IconButton(onClick = onRemindersClick) {
                             Icon(Icons.Outlined.NotificationsActive, contentDescription = "Rappels de séance")
                         }
