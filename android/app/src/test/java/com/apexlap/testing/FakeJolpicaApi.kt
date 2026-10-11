@@ -74,16 +74,49 @@ class FakeJolpicaApi : JolpicaApi {
         return response.copy(data = response.data.copy(raceTable = response.data.raceTable.copy(races = races)))
     }
 
+    /** Fake all-time driver list of [historicDriverCount] entries, served in pages like the real API. */
+    var historicDriverCount = 250
+    val driverPages = mutableListOf<Int>()
+
+    override suspend fun allDrivers(offset: Int, limit: Int): JolpicaResponse<DriverTableData> {
+        checkOnline()
+        driverPages += offset
+        val drivers = (offset until minOf(offset + limit, historicDriverCount)).map {
+            com.apexlap.data.remote.dto.DriverDto("driver_$it", null, null, "Given$it", "Family$it", null, "French")
+        }
+        return JolpicaResponse(DriverTableData(historicDriverCount.toString(), com.apexlap.data.remote.dto.DriverTableDto(drivers)))
+    }
+
+    override suspend fun allConstructors(offset: Int, limit: Int): JolpicaResponse<ConstructorTableData> {
+        checkOnline()
+        return JolpicaResponse(ConstructorTableData("1", ConstructorTableDto(listOf(ConstructorDto("ferrari", "Ferrari", "Italian")))))
+    }
+
+    override suspend fun allCircuits(limit: Int): JolpicaResponse<com.apexlap.data.remote.dto.CircuitTableData> {
+        checkOnline()
+        return JolpicaResponse(com.apexlap.data.remote.dto.CircuitTableData(com.apexlap.data.remote.dto.CircuitTableDto()))
+    }
+
+    override suspend fun circuitWinners(circuitId: String, limit: Int): JolpicaResponse<RaceTableData> {
+        checkOnline()
+        return decodeFixture("results_singapore_2026.json")
+    }
+
+    override suspend fun seasonWinners(season: Int, limit: Int): JolpicaResponse<RaceTableData> {
+        checkOnline()
+        return decodeFixture("results_singapore_2026.json")
+    }
+
     override suspend fun driver(driverId: String): JolpicaResponse<DriverTableData> {
         checkOnline()
         val standings: JolpicaResponse<StandingsData> = decodeFixture("driver_standings_2026.json")
         val dto = standings.data.standingsTable.lists.first().driverStandings.first { it.driver.driverId == driverId }.driver
-        return JolpicaResponse(DriverTableData(com.apexlap.data.remote.dto.DriverTableDto(listOf(dto))))
+        return JolpicaResponse(DriverTableData(driverTable = com.apexlap.data.remote.dto.DriverTableDto(listOf(dto))))
     }
 
     override suspend fun constructor(constructorId: String): JolpicaResponse<ConstructorTableData> {
         checkOnline()
-        return JolpicaResponse(ConstructorTableData(ConstructorTableDto(listOf(ConstructorDto(constructorId, "Mercedes", "German")))))
+        return JolpicaResponse(ConstructorTableData(constructorTable = ConstructorTableDto(listOf(ConstructorDto(constructorId, "Mercedes", "German")))))
     }
 
     override suspend fun count(kind: String, id: String, what: String, limit: Int): JolpicaResponse<TotalData> {
