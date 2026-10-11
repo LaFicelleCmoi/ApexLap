@@ -48,6 +48,43 @@ jobs:
         if: failure()
         run: tail -n 40 build.log | sed 's/^/::error title=xcodebuild::/' || true
 
+  simulator:
+    name: Simulator build (Appetize)
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: ios
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate Xcode project
+        run: brew install xcodegen && xcodegen generate
+      - name: Build for the iOS Simulator
+        run: |
+          set -o pipefail
+          # Universal (Apple Silicon + Intel) so browser streaming services can run it.
+          xcodebuild build \
+            -project ApexLap.xcodeproj \
+            -scheme ApexLap \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build \
+            ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tee build.log | xcbeautify --renderer github-actions
+      - name: Zip the .app
+        run: |
+          cd build/Build/Products/Release-iphonesimulator
+          zip -qry "$GITHUB_WORKSPACE/ios/ApexLap-simulator.zip" ApexLap.app
+          ls -la "$GITHUB_WORKSPACE/ios/ApexLap-simulator.zip"
+      - name: Upload simulator build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ApexLap-simulator-appetize
+          path: ios/ApexLap-simulator.zip
+      - name: Surface the end of the log
+        if: failure()
+        run: tail -n 40 build.log | sed 's/^/::error title=xcodebuild::/' || true
+
   ipa:
     name: Unsigned IPA (device)
     runs-on: macos-15
