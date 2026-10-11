@@ -16,6 +16,12 @@ enum ApexColor {
     static let greenSector = Color(hex: 0x2ED573)
 }
 
+/// Categorical chart series colours, validated (lightness, chroma, colour-blind separation, 3:1 contrast) on the
+/// dark card surface. Team colours are not used for series: several pairs are too close and team-mates would collide.
+enum ChartPalette {
+    static let colors: [Color] = [Color(hex: 0x3987E5), Color(hex: 0xD95926), Color(hex: 0x199E70), Color(hex: 0xC98500), Color(hex: 0xD55181)]
+}
+
 enum TeamColor {
     private static let colors: [String: Color] = [
         "mercedes": Color(hex: 0x27F4D2),
