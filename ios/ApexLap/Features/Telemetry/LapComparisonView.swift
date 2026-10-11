@@ -268,32 +268,50 @@ struct LapComparisonView: View {
         }
     }
 
+    private struct SectorRow: Identifiable {
+        let label: String
+        let mine: [Double?]
+        let other: [Double?]
+        let color: Color
+        var id: String { label }
+    }
+
+    private var sectorRows: [SectorRow] {
+        guard let a = model.lapA, let b = model.lapB else { return [] }
+        let timesA: [Double?] = a.sectors + [a.duration]
+        let timesB: [Double?] = b.sectors + [b.duration]
+        return [
+            SectorRow(label: "\(codeA) T\(a.lapNumber)", mine: timesA, other: timesB, color: colors[0]),
+            SectorRow(label: "\(codeB) T\(b.lapNumber)", mine: timesB, other: timesA, color: colors[1]),
+        ]
+    }
+
     private var sectorTable: some View {
-        Group {
-            if let a = model.lapA, let b = model.lapB {
-                let rows = [(codeA + " T\(a.lapNumber)", a.sectors + [a.duration], b.sectors + [b.duration], colors[0]),
-                            (codeB + " T\(b.lapNumber)", b.sectors + [b.duration], a.sectors + [a.duration], colors[1])]
-                Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 6) {
-                    GridRow {
-                        Text("")
-                        ForEach(["S1", "S2", "S3", "TOUR"], id: \.self) { Text($0).font(ApexFont.label).foregroundStyle(ApexColor.telemetry) }
-                    }
-                    ForEach(rows, id: \.0) { row in
-                        GridRow {
-                            legendItem(row.0, row.3)
-                            ForEach(0..<4, id: \.self) { i in
-                                let mine = row.1, other = row.2
-                                let better = mine[i] != nil && other[i] != nil && mine[i]! < other[i]!
-                                Text(mine[i].map { i == 3 ? LapTimeFormat.string($0) : String(format: "%.3f", $0) } ?? "—")
-                                    .font(.caption.monospacedDigit().weight(better ? .black : .regular))
-                                    .foregroundStyle(better ? ApexColor.floodlight : ApexColor.telemetry)
-                            }
-                        }
-                    }
+        Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 6) {
+            GridRow {
+                Text("")
+                ForEach(["S1", "S2", "S3", "TOUR"], id: \.self) { Text($0).font(ApexFont.label).foregroundStyle(ApexColor.telemetry) }
+            }
+            ForEach(sectorRows) { row in
+                GridRow {
+                    legendItem(row.label, row.color)
+                    ForEach(0..<4, id: \.self) { i in sectorCell(row, index: i) }
                 }
-                .padding(.horizontal, 16)
             }
         }
+        .padding(.horizontal, 16)
+    }
+
+    private func sectorCell(_ row: SectorRow, index i: Int) -> some View {
+        let value: Double? = row.mine[i]
+        let rival: Double? = row.other[i]
+        var better = false
+        if let value, let rival { better = value < rival }
+        let text: String
+        if let value { text = i == 3 ? LapTimeFormat.string(value) : String(format: "%.3f", value) } else { text = "—" }
+        return Text(text)
+            .font(.caption.monospacedDigit().weight(better ? .black : .regular))
+            .foregroundStyle(better ? ApexColor.floodlight : ApexColor.telemetry)
     }
 
     private func legendItem(_ text: String, _ color: Color) -> some View {
