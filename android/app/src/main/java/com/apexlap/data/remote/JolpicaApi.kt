@@ -1,5 +1,6 @@
 package com.apexlap.data.remote
 
+import com.apexlap.data.remote.dto.CircuitTableData
 import com.apexlap.data.remote.dto.ConstructorTableData
 import com.apexlap.data.remote.dto.DriverTableData
 import com.apexlap.data.remote.dto.JolpicaResponse
@@ -65,6 +66,24 @@ interface JolpicaApi {
         @Query("offset") offset: Int,
         @Query("limit") limit: Int = PAGE_SIZE,
     ): JolpicaResponse<RaceTableData>
+
+    /** All-time drivers (≈900), paginated. */
+    @GET("drivers.json")
+    suspend fun allDrivers(@Query("offset") offset: Int, @Query("limit") limit: Int = PAGE_SIZE): JolpicaResponse<DriverTableData>
+
+    @GET("constructors.json")
+    suspend fun allConstructors(@Query("offset") offset: Int, @Query("limit") limit: Int = PAGE_SIZE): JolpicaResponse<ConstructorTableData>
+
+    @GET("circuits.json")
+    suspend fun allCircuits(@Query("limit") limit: Int = PAGE_SIZE): JolpicaResponse<CircuitTableData>
+
+    /** Winners of every Grand Prix held at a circuit. */
+    @GET("circuits/{circuitId}/results/1.json")
+    suspend fun circuitWinners(@Path("circuitId") circuitId: String, @Query("limit") limit: Int = PAGE_SIZE): JolpicaResponse<RaceTableData>
+
+    /** Winner of each Grand Prix of a season. */
+    @GET("{season}/results/1.json")
+    suspend fun seasonWinners(@Path("season") season: Int, @Query("limit") limit: Int = PAGE_SIZE): JolpicaResponse<RaceTableData>
 
     @GET("drivers/{driverId}.json")
     suspend fun driver(@Path("driverId") driverId: String): JolpicaResponse<DriverTableData>
