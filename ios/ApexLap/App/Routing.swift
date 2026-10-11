@@ -6,6 +6,9 @@ enum AppRoute: Hashable {
     case race(season: Int, round: Int)
     case driver(id: String)
     case constructor(id: String)
+    case reminders
+    /// An OpenF1 session key, or nil to start from the latest qualifying.
+    case telemetry(sessionKey: Int?)
 }
 
 extension View {
@@ -15,6 +18,8 @@ extension View {
             case let .race(season, round): RaceView(season: season, round: round)
             case let .driver(id): DriverView(driverId: id)
             case let .constructor(id): ConstructorView(constructorId: id)
+            case .reminders: RemindersView()
+            case let .telemetry(sessionKey): LapComparisonView(sessionKey: sessionKey)
             }
         }
     }
