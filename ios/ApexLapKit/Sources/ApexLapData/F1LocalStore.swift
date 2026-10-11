@@ -14,6 +14,13 @@ public protocol F1LocalStore: Sendable {
     func raceResults(season: Int, round: Int) async -> [RaceResult]
     func replaceRaceResults(_ results: [RaceResult], season: Int, round: Int) async
 
+    func sprintResults(season: Int, round: Int) async -> [RaceResult]
+    func replaceSprintResults(_ results: [RaceResult], season: Int, round: Int) async
+    func qualifying(season: Int, round: Int) async -> [QualifyingResult]
+    func replaceQualifying(_ results: [QualifyingResult], season: Int, round: Int) async
+    func seasonResults(season: Int) async -> [ScoredResult]
+    func replaceSeasonResults(_ results: [ScoredResult], season: Int) async
+
     func driverProfile(id: String) async -> DriverProfile?
     func saveDriverProfile(_ profile: DriverProfile) async
 
@@ -26,6 +33,9 @@ public actor InMemoryF1Store: F1LocalStore {
     private var drivers: [Int: [DriverStanding]] = [:]
     private var constructors: [Int: [ConstructorStanding]] = [:]
     private var results: [String: [RaceResult]] = [:]
+    private var sprints: [String: [RaceResult]] = [:]
+    private var qualifyings: [String: [QualifyingResult]] = [:]
+    private var seasons: [Int: [ScoredResult]] = [:]
     private var driverProfiles: [String: DriverProfile] = [:]
     private var constructorProfiles: [String: ConstructorProfile] = [:]
 
@@ -45,6 +55,13 @@ public actor InMemoryF1Store: F1LocalStore {
     public func replaceRaceResults(_ results: [RaceResult], season: Int, round: Int) {
         self.results["\(season)-\(round)"] = results
     }
+
+    public func sprintResults(season: Int, round: Int) -> [RaceResult] { sprints["\(season)-\(round)"] ?? [] }
+    public func replaceSprintResults(_ results: [RaceResult], season: Int, round: Int) { sprints["\(season)-\(round)"] = results }
+    public func qualifying(season: Int, round: Int) -> [QualifyingResult] { qualifyings["\(season)-\(round)"] ?? [] }
+    public func replaceQualifying(_ results: [QualifyingResult], season: Int, round: Int) { qualifyings["\(season)-\(round)"] = results }
+    public func seasonResults(season: Int) -> [ScoredResult] { seasons[season] ?? [] }
+    public func replaceSeasonResults(_ results: [ScoredResult], season: Int) { seasons[season] = results }
 
     public func driverProfile(id: String) -> DriverProfile? { driverProfiles[id] }
     public func saveDriverProfile(_ profile: DriverProfile) { driverProfiles[profile.driver.id] = profile }
