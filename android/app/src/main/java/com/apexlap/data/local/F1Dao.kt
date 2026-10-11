@@ -96,6 +96,33 @@ interface F1Dao {
         insertQualifying(rows)
     }
 
+    @Query("SELECT * FROM historic_drivers ORDER BY familyName, givenName")
+    fun observeHistoricDrivers(): Flow<List<HistoricDriverEntity>>
+
+    @Query("SELECT COUNT(*) FROM historic_drivers")
+    suspend fun historicDriverCount(): Int
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertHistoricDrivers(rows: List<HistoricDriverEntity>)
+
+    @Query("SELECT * FROM historic_constructors ORDER BY name")
+    fun observeHistoricConstructors(): Flow<List<HistoricConstructorEntity>>
+
+    @Query("SELECT COUNT(*) FROM historic_constructors")
+    suspend fun historicConstructorCount(): Int
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertHistoricConstructors(rows: List<HistoricConstructorEntity>)
+
+    @Query("SELECT * FROM circuits ORDER BY name")
+    fun observeCircuits(): Flow<List<CircuitEntity>>
+
+    @Query("SELECT COUNT(*) FROM circuits")
+    suspend fun circuitCount(): Int
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertCircuits(rows: List<CircuitEntity>)
+
     @Query("SELECT * FROM driver_profiles WHERE driverId = :driverId")
     fun observeDriverProfile(driverId: String): Flow<DriverProfileEntity?>
 
