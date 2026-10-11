@@ -60,7 +60,11 @@ private const val CHART_DRIVERS = 5
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StatsScreen(onDriverClick: (String) -> Unit, viewModel: StatsViewModel = hiltViewModel()) {
+fun StatsScreen(
+    onDriverClick: (String) -> Unit,
+    onCompareLaps: () -> Unit,
+    viewModel: StatsViewModel = hiltViewModel(),
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val progression = state.progression
 
@@ -92,6 +96,24 @@ fun StatsScreen(onDriverClick: (String) -> Unit, viewModel: StatsViewModel = hil
                     ProgressionChart(progression.rounds, series)
                     Spacer(Modifier.height(8.dp))
                     ChartLegend(series)
+                }
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp).clickable(onClick = onCompareLaps),
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                ) {
+                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Comparateur de tours", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "Télémétrie de deux pilotes superposée : vitesse, gaz, freins, écart et carte du circuit.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Text("›", style = MaterialTheme.typography.headlineSmall)
+                    }
                 }
 
                 SectionHeader("Leaders de la saison")
