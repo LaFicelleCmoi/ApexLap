@@ -9,13 +9,15 @@ let package = Package(
     products: [
         .library(name: "ApexLapDomain", targets: ["ApexLapDomain"]),
         .library(name: "ApexLapData", targets: ["ApexLapData"]),
+        .library(name: "ApexLapLive", targets: ["ApexLapLive"]),
     ],
     targets: [
         .target(name: "ApexLapDomain"),
         .target(name: "ApexLapData", dependencies: ["ApexLapDomain"]),
+        .target(name: "ApexLapLive", dependencies: ["ApexLapData"]),
         .testTarget(
             name: "ApexLapKitTests",
-            dependencies: ["ApexLapDomain", "ApexLapData"],
+            dependencies: ["ApexLapDomain", "ApexLapData", "ApexLapLive"],
             resources: [.copy("Fixtures")]
         ),
     ]
