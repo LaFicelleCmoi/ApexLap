@@ -63,6 +63,7 @@ private const val CHART_DRIVERS = 5
 fun StatsScreen(
     onDriverClick: (String) -> Unit,
     onCompareLaps: () -> Unit,
+    onEncyclopediaClick: () -> Unit,
     viewModel: StatsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -108,6 +109,24 @@ fun StatsScreen(
                             Text("Comparateur de tours", style = MaterialTheme.typography.titleMedium)
                             Text(
                                 "Télémétrie de deux pilotes superposée : vitesse, gaz, freins, écart et carte du circuit.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Text("›", style = MaterialTheme.typography.headlineSmall)
+                    }
+                }
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).clickable(onClick = onEncyclopediaClick),
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                ) {
+                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Encyclopédie", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "Toutes les saisons depuis 1950, 881 pilotes, les écuries, les circuits et un glossaire.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
