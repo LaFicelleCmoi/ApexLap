@@ -29,6 +29,9 @@ import androidx.navigation.compose.rememberNavController
 import com.apexlap.ui.calendar.CalendarScreen
 import com.apexlap.ui.constructor.ConstructorScreen
 import com.apexlap.ui.driver.DriverScreen
+import com.apexlap.ui.encyclopedia.CircuitScreen
+import com.apexlap.ui.encyclopedia.EncyclopediaScreen
+import com.apexlap.ui.encyclopedia.SeasonScreen
 import com.apexlap.ui.live.LiveTimingScreen
 import com.apexlap.ui.race.RaceScreen
 import com.apexlap.ui.reminders.RemindersScreen
@@ -48,6 +51,9 @@ import kotlin.reflect.KClass
 @Serializable data class DriverRoute(val driverId: String)
 @Serializable data class ConstructorRoute(val constructorId: String)
 @Serializable data object RemindersRoute
+@Serializable data object EncyclopediaRoute
+@Serializable data class SeasonRoute(val season: Int)
+@Serializable data class CircuitRoute(val circuitId: String)
 
 /** [sessionKey] is an OpenF1 session, or -1 to let the screen pick the latest qualifying. */
 @Serializable data class TelemetryRoute(val sessionKey: Int = -1)
@@ -105,6 +111,7 @@ fun ApexLapApp(pendingRace: RaceRoute? = null, onPendingRaceOpened: () -> Unit =
                 CalendarScreen(
                     onRaceClick = { navController.navigate(RaceRoute(it.season, it.round)) },
                     onRemindersClick = { navController.navigate(RemindersRoute) },
+                    onEncyclopediaClick = { navController.navigate(EncyclopediaRoute) },
                 )
             }
             composable<ResultsRoute> {
@@ -114,6 +121,7 @@ fun ApexLapApp(pendingRace: RaceRoute? = null, onPendingRaceOpened: () -> Unit =
                 StatsScreen(
                     onDriverClick = { navController.navigate(DriverRoute(it)) },
                     onCompareLaps = { navController.navigate(TelemetryRoute()) },
+                    onEncyclopediaClick = { navController.navigate(EncyclopediaRoute) },
                 )
             }
             composable<LiveRoute> {
@@ -126,6 +134,30 @@ fun ApexLapApp(pendingRace: RaceRoute? = null, onPendingRaceOpened: () -> Unit =
                 StandingsScreen(
                     onDriverClick = { navController.navigate(DriverRoute(it)) },
                     onConstructorClick = { navController.navigate(ConstructorRoute(it)) },
+                )
+            }
+            composable<EncyclopediaRoute> {
+                EncyclopediaScreen(
+                    onBack = navController::popBackStack,
+                    onSeasonClick = { navController.navigate(SeasonRoute(it)) },
+                    onDriverClick = { navController.navigate(DriverRoute(it)) },
+                    onConstructorClick = { navController.navigate(ConstructorRoute(it)) },
+                    onCircuitClick = { navController.navigate(CircuitRoute(it)) },
+                )
+            }
+            composable<SeasonRoute> {
+                SeasonScreen(
+                    onBack = navController::popBackStack,
+                    onRaceClick = { season, round -> navController.navigate(RaceRoute(season, round)) },
+                    onDriverClick = { navController.navigate(DriverRoute(it)) },
+                    onConstructorClick = { navController.navigate(ConstructorRoute(it)) },
+                )
+            }
+            composable<CircuitRoute> {
+                CircuitScreen(
+                    onBack = navController::popBackStack,
+                    onRaceClick = { season, round -> navController.navigate(RaceRoute(season, round)) },
+                    onDriverClick = { navController.navigate(DriverRoute(it)) },
                 )
             }
             composable<RemindersRoute> {
