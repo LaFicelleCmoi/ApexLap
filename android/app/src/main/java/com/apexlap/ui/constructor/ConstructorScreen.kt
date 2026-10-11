@@ -28,6 +28,7 @@ import com.apexlap.ui.components.LoadingState
 import com.apexlap.ui.components.OfflineBanner
 import com.apexlap.ui.components.SectionHeader
 import com.apexlap.ui.components.StatTile
+import com.apexlap.ui.components.TitlesRow
 import com.apexlap.ui.components.flagOf
 import com.apexlap.ui.components.formatPoints
 import com.apexlap.ui.theme.ApexColors
@@ -86,6 +87,11 @@ fun ConstructorScreen(onBack: () -> Unit, onDriverClick: (String) -> Unit, viewM
                                 Text(driver.driver.number ?: "", style = MaterialTheme.typography.headlineSmall, color = color)
                             }
                         }
+                    }
+
+                    if (state.titles.count > 0) {
+                        SectionHeader("Titres constructeurs")
+                        TitlesRow(state.titles)
                     }
 
                     SectionHeader("Historique")
