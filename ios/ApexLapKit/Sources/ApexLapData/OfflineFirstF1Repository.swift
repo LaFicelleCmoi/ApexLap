@@ -46,6 +46,32 @@ public struct OfflineFirstF1Repository: F1Repository {
         return results
     }
 
+    public func cachedSprintResults(season: Int, round: Int) async -> [RaceResult] {
+        await store.sprintResults(season: season, round: round)
+    }
+
+    public func cachedQualifying(season: Int, round: Int) async -> [QualifyingResult] {
+        await store.qualifying(season: season, round: round)
+    }
+
+    public func refreshRaceWeekend(season: Int, round: Int, includeSprint: Bool) async throws {
+        await store.replaceRaceResults(try await client.raceResults(season: season, round: round), season: season, round: round)
+        await store.replaceQualifying(try await client.qualifying(season: season, round: round), season: season, round: round)
+        if includeSprint {
+            await store.replaceSprintResults(try await client.sprintResults(season: season, round: round), season: season, round: round)
+        }
+    }
+
+    public func cachedSeasonResults(season: Int) async -> [ScoredResult] {
+        await store.seasonResults(season: season)
+    }
+
+    public func refreshSeasonResults(season: Int) async throws -> [ScoredResult] {
+        let results = try await client.seasonResults(season: season)
+        await store.replaceSeasonResults(results, season: season)
+        return results
+    }
+
     public func cachedDriverProfile(id: String) async -> DriverProfile? {
         await store.driverProfile(id: id)
     }
