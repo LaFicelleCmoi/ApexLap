@@ -34,13 +34,25 @@ data class StandingsListDto(
 )
 
 @Serializable
-data class DriverTableData(@SerialName("DriverTable") val driverTable: DriverTableDto)
+data class DriverTableData(
+    val total: String = "0",
+    @SerialName("DriverTable") val driverTable: DriverTableDto,
+)
 
 @Serializable
 data class DriverTableDto(@SerialName("Drivers") val drivers: List<DriverDto> = emptyList())
 
 @Serializable
-data class ConstructorTableData(@SerialName("ConstructorTable") val constructorTable: ConstructorTableDto)
+data class ConstructorTableData(
+    val total: String = "0",
+    @SerialName("ConstructorTable") val constructorTable: ConstructorTableDto,
+)
+
+@Serializable
+data class CircuitTableData(@SerialName("CircuitTable") val circuitTable: CircuitTableDto)
+
+@Serializable
+data class CircuitTableDto(@SerialName("Circuits") val circuits: List<CircuitDto> = emptyList())
 
 @Serializable
 data class ConstructorTableDto(
