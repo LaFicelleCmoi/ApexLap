@@ -237,3 +237,44 @@ public struct Countdown: Hashable, Sendable {
         self.seconds = seconds
     }
 }
+
+/// A race or sprint result tagged with its round, as used for season-wide statistics.
+public struct ScoredResult: Codable, Hashable, Sendable {
+    public let round: Int
+    public let isSprint: Bool
+    public let result: RaceResult
+
+    public init(round: Int, isSprint: Bool, result: RaceResult) {
+        self.round = round
+        self.isSprint = isSprint
+        self.result = result
+    }
+}
+
+public struct QualifyingResult: Codable, Hashable, Sendable, Identifiable {
+    public let position: Int
+    public let driver: Driver
+    public let constructor: Constructor
+    public let q1: String?
+    public let q2: String?
+    public let q3: String?
+
+    public var id: String { driver.id }
+    /// Best lap of the deepest session reached.
+    public var bestTime: String? { q3 ?? q2 ?? q1 }
+    public var eliminatedIn: String? { q3 != nil ? nil : (q2 != nil ? "Q2" : "Q1") }
+
+    public init(position: Int, driver: Driver, constructor: Constructor, q1: String?, q2: String?, q3: String?) {
+        self.position = position
+        self.driver = driver
+        self.constructor = constructor
+        self.q1 = q1
+        self.q2 = q2
+        self.q3 = q3
+    }
+}
+
+extension RaceResult {
+    /// Classified finishers have a numeric `positionText`; R/D/W/N/E/F mark retirements and exclusions.
+    public var isClassified: Bool { !positionText.isEmpty && positionText.allSatisfy(\.isNumber) }
+}
