@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Stylised apex: a red racing line clipping a white kerb. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFF5F5F7"
+        android:pathData="M30,74 L54,30 L60,30 L40,74 Z" />
+    <path
+        android:fillColor="#FFE10600"
+        android:pathData="M46,74 L66,34 C70,28 78,30 78,38 L78,74 L70,74 L70,44 L56,74 Z" />
+</vector>
