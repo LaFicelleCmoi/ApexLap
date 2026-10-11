@@ -12,7 +12,13 @@ public enum NetworkError: Error, Equatable, Sendable {
 
 /// Transport abstraction so the client can be tested without the network.
 public protocol HTTPClient: Sendable {
-    func get(_ url: URL) async throws -> Data
+    func send(_ request: URLRequest) async throws -> Data
+}
+
+extension HTTPClient {
+    public func get(_ url: URL) async throws -> Data {
+        try await send(URLRequest(url: url, timeoutInterval: 30))
+    }
 }
 
 public struct URLSessionHTTPClient: HTTPClient {
@@ -22,8 +28,7 @@ public struct URLSessionHTTPClient: HTTPClient {
         self.session = session
     }
 
-    public func get(_ url: URL) async throws -> Data {
-        let request = URLRequest(url: url, timeoutInterval: 20)
+    public func send(_ request: URLRequest) async throws -> Data {
         let (data, response): (Data, URLResponse)
         do {
             (data, response) = try await session.data(for: request)
@@ -44,7 +49,8 @@ public struct JolpicaClient: Sendable {
     private let http: HTTPClient
     private let baseURL: URL
 
-    public init(http: HTTPClient = URLSessionHTTPClient(), baseURL: URL = JolpicaClient.baseURL) {
+    /// Jolpica allows ~4 requests/second; requests are spaced and HTTP 429 retried.
+    public init(http: HTTPClient = ThrottledHTTPClient(URLSessionHTTPClient(), minInterval: 0.3), baseURL: URL = JolpicaClient.baseURL) {
         self.http = http
         self.baseURL = baseURL
     }
@@ -69,6 +75,36 @@ public struct JolpicaClient: Sendable {
     func raceResults(season: Int, round: Int) async throws -> [RaceResult] {
         let response: JolpicaResponse<RaceTableData> = try await get("\(season)/\(round)/results.json", limit: 100)
         return response.data.raceTable.races.first?.results?.map { $0.toDomain() } ?? []
+    }
+
+    func sprintResults(season: Int, round: Int) async throws -> [RaceResult] {
+        let response: JolpicaResponse<RaceTableData> = try await get("\(season)/\(round)/sprint.json", limit: 100)
+        return response.data.raceTable.races.first?.sprintResults?.map { $0.toDomain() } ?? []
+    }
+
+    func qualifying(season: Int, round: Int) async throws -> [QualifyingResult] {
+        let response: JolpicaResponse<RaceTableData> = try await get("\(season)/\(round)/qualifying.json", limit: 100)
+        return (response.data.raceTable.races.first?.qualifyingResults?.map { $0.toDomain() } ?? []).sorted { $0.position < $1.position }
+    }
+
+    /// Every race and sprint result of a season, walking the 100-row pages and dropping rows repeated across pages.
+    func seasonResults(season: Int) async throws -> [ScoredResult] {
+        var rows: [ScoredResult] = []
+        for (path, isSprint) in [("results", false), ("sprint", true)] {
+            var offset = 0
+            var total = 0
+            repeat {
+                let page: JolpicaResponse<RaceTableData> = try await get("\(season)/\(path).json", limit: 100, offset: offset)
+                for race in page.data.raceTable.races {
+                    let results = (isSprint ? race.sprintResults : race.results) ?? []
+                    rows += results.map { ScoredResult(round: Int(race.round) ?? 0, isSprint: isSprint, result: $0.toDomain()) }
+                }
+                total = Int(page.data.total) ?? 0
+                offset += 100
+            } while offset < total
+        }
+        var seen = Set<String>()
+        return rows.filter { seen.insert("\($0.round)-\($0.isSprint)-\($0.result.driver.id)").inserted }
     }
 
     func driver(id: String) async throws -> Driver {
@@ -102,11 +138,12 @@ public struct JolpicaClient: Sendable {
         return Int(response.data.total) ?? 0
     }
 
-    private func get<T: Decodable>(_ path: String, limit: Int? = nil) async throws -> T {
+    private func get<T: Decodable>(_ path: String, limit: Int? = nil, offset: Int? = nil) async throws -> T {
         var components = URLComponents(url: baseURL.appendingPathComponent(path), resolvingAgainstBaseURL: false)!
-        if let limit {
-            components.queryItems = [URLQueryItem(name: "limit", value: String(limit))]
-        }
+        var items: [URLQueryItem] = []
+        if let limit { items.append(URLQueryItem(name: "limit", value: String(limit))) }
+        if let offset { items.append(URLQueryItem(name: "offset", value: String(offset))) }
+        if !items.isEmpty { components.queryItems = items }
         let data = try await http.get(components.url!)
         do {
             return try JSONDecoder().decode(T.self, from: data)
