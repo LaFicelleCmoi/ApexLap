@@ -82,32 +82,7 @@ schemes:
     build:
       targets:
         ApexLap: all
-        ApexLapWidget:
-    type: app-extension
-    platform: iOS
-    sources:
-      - ApexLapWidget
-    dependencies:
-      - package: ApexLapKit
-        product: ApexLapDomain
-      - package: ApexLapKit
-        product: ApexLapData
-      - sdk: WidgetKit.framework
-      - sdk: SwiftUI.framework
-    entitlements:
-      path: ApexLapWidget/ApexLapWidget.entitlements
-    info:
-      path: ApexLapWidget/Info.plist
-      properties:
-        CFBundleDisplayName: Apex Lap
-        NSExtension:
-          NSExtensionPointIdentifier: com.apple.widgetkit-extension
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.apexlap.ios.widget
-        TARGETED_DEVICE_FAMILY: "1"
-        CODE_SIGN_STYLE: Automatic
-  ApexLapTests: [test]
+        ApexLapTests: [test]
     test:
       targets:
         - ApexLapTests
