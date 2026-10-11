@@ -13,6 +13,15 @@ public protocol F1Repository: Sendable {
     func cachedRaceResults(season: Int, round: Int) async -> [RaceResult]
     func refreshRaceResults(season: Int, round: Int) async throws -> [RaceResult]
 
+    func cachedSprintResults(season: Int, round: Int) async -> [RaceResult]
+    func cachedQualifying(season: Int, round: Int) async -> [QualifyingResult]
+    /// Race, qualifying and (for sprint weekends) sprint results of one Grand Prix.
+    func refreshRaceWeekend(season: Int, round: Int, includeSprint: Bool) async throws
+
+    /// Every race and sprint result of the season: the input of the results and statistics screens.
+    func cachedSeasonResults(season: Int) async -> [ScoredResult]
+    func refreshSeasonResults(season: Int) async throws -> [ScoredResult]
+
     func cachedDriverProfile(id: String) async -> DriverProfile?
     func refreshDriverProfile(id: String) async throws -> DriverProfile
 
