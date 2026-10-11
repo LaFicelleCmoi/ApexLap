@@ -41,6 +41,19 @@ class RateLimitInterceptorTest {
     }
 
     @Test
+    fun `per-minute cap delays the request beyond the window`() {
+        val limited = RateLimitInterceptor(
+            minIntervalMillis = 0,
+            maxPerMinute = 3,
+            sleeper = { sleeps += it; now += it },
+            clock = { now },
+        )
+        val chain = FakeChain(listOf(200, 200, 200, 200))
+        repeat(4) { limited.intercept(chain) }
+        assertEquals(listOf(60_000L), sleeps)
+    }
+
+    @Test
     fun `gives up after max retries and returns the 429`() {
         val chain = FakeChain(listOf(429, 429, 429, 429))
         assertEquals(429, interceptor.intercept(chain).code)
