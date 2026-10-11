@@ -25,6 +25,11 @@ targets:
         product: ApexLapDomain
       - package: ApexLapKit
         product: ApexLapData
+      - package: ApexLapKit
+        product: ApexLapLive
+      - target: ApexLapWidget
+    entitlements:
+      path: ApexLap/ApexLap.entitlements
     info:
       path: ApexLap/Info.plist
       properties:
@@ -40,6 +45,31 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         TARGETED_DEVICE_FAMILY: "1"
         CODE_SIGN_STYLE: Automatic
+  ApexLapWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - ApexLapWidget
+    dependencies:
+      - package: ApexLapKit
+        product: ApexLapDomain
+      - package: ApexLapKit
+        product: ApexLapData
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+    entitlements:
+      path: ApexLapWidget/ApexLapWidget.entitlements
+    info:
+      path: ApexLapWidget/Info.plist
+      properties:
+        CFBundleDisplayName: Apex Lap
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.apexlap.ios.widget
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_STYLE: Automatic
   ApexLapTests:
     type: bundle.unit-test
     platform: iOS
@@ -52,7 +82,32 @@ schemes:
     build:
       targets:
         ApexLap: all
-        ApexLapTests: [test]
+        ApexLapWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - ApexLapWidget
+    dependencies:
+      - package: ApexLapKit
+        product: ApexLapDomain
+      - package: ApexLapKit
+        product: ApexLapData
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+    entitlements:
+      path: ApexLapWidget/ApexLapWidget.entitlements
+    info:
+      path: ApexLapWidget/Info.plist
+      properties:
+        CFBundleDisplayName: Apex Lap
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.apexlap.ios.widget
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_STYLE: Automatic
+  ApexLapTests: [test]
     test:
       targets:
         - ApexLapTests
