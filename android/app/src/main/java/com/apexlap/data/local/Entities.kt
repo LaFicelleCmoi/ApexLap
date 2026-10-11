@@ -92,6 +92,16 @@ data class QualifyingResultEntity(
     @Embedded(prefix = "team_") val constructor: ConstructorColumns,
 )
 
+/** All-time lists for the encyclopedia. */
+@Entity(tableName = "historic_drivers", primaryKeys = ["driverId"])
+data class HistoricDriverEntity(@Embedded val driver: DriverColumns)
+
+@Entity(tableName = "historic_constructors", primaryKeys = ["constructorId"])
+data class HistoricConstructorEntity(@Embedded val constructor: ConstructorColumns)
+
+@Entity(tableName = "circuits", primaryKeys = ["circuitId"])
+data class CircuitEntity(val circuitId: String, val name: String, val locality: String, val country: String)
+
 @Entity(tableName = "driver_profiles", primaryKeys = ["driverId"])
 data class DriverProfileEntity(
     @Embedded val driver: DriverColumns,
