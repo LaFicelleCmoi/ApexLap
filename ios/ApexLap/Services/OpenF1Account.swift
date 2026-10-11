@@ -9,8 +9,8 @@ import Security
 @Observable
 final class OpenF1Account {
     static let shared = OpenF1Account()
-    private static let usernameKey = "openf1Username"
-    private static let service = "com.apexlap.openf1"
+    private nonisolated static let usernameKey = "openf1Username"
+    private nonisolated static let service = "com.apexlap.openf1"
 
     private(set) var username: String? = UserDefaults.standard.string(forKey: usernameKey)
     let repository = OpenF1Repository()
