@@ -14,10 +14,13 @@ import kotlinx.serialization.json.Json
         ConstructorStandingEntity::class,
         RaceResultEntity::class,
         QualifyingResultEntity::class,
+        HistoricDriverEntity::class,
+        HistoricConstructorEntity::class,
+        CircuitEntity::class,
         DriverProfileEntity::class,
         ConstructorProfileEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
