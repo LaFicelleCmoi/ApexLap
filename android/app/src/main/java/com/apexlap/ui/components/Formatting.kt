@@ -54,3 +54,10 @@ fun relativeStart(from: Instant, to: Instant): String {
         else -> "dans ${minutes / (24 * 60)} j" + ((minutes / 60) % 24).takeIf { it > 0 }?.let { " $it h" }.orEmpty()
     }
 }
+
+/** 97.558 → "1:37.558". */
+fun formatLapTime(seconds: Double): String {
+    val minutes = (seconds / 60).toInt()
+    val rest = seconds - minutes * 60
+    return if (minutes > 0) String.format(Locale.US, "%d:%06.3f", minutes, rest) else String.format(Locale.US, "%.3f", rest)
+}
