@@ -5,12 +5,13 @@ import okhttp3.Response
 import java.io.InterruptedIOException
 
 /**
- * Jolpica allows ~4 requests/second (500/hour) per client and answers HTTP 429 beyond that.
- * Requests are spaced by [minIntervalMillis] across all threads, and a 429 is retried with
- * backoff (honouring `Retry-After` when present).
+ * Client-side rate limiting. Jolpica allows ~4 requests/second; OpenF1's free tier 3/second and 30/minute.
+ * Requests are spaced by [minIntervalMillis] across all threads, optionally capped to [maxPerMinute] in a
+ * sliding window, and a 429 is retried with backoff (honouring `Retry-After` when present).
  */
 class RateLimitInterceptor(
     private val minIntervalMillis: Long = 300,
+    private val maxPerMinute: Int? = null,
     private val maxRetries: Int = 3,
     private val sleeper: (Long) -> Unit = Thread::sleep,
     private val clock: () -> Long = System::currentTimeMillis,
@@ -18,6 +19,7 @@ class RateLimitInterceptor(
 
     private val lock = Any()
     private var nextSlot = 0L
+    private val recent = ArrayDeque<Long>()
 
     override fun intercept(chain: Interceptor.Chain): Response {
         var attempt = 0
@@ -36,7 +38,12 @@ class RateLimitInterceptor(
     private fun awaitSlot() {
         val wait = synchronized(lock) {
             val now = clock()
-            val slot = maxOf(now, nextSlot)
+            var slot = maxOf(now, nextSlot)
+            maxPerMinute?.let { limit ->
+                while (recent.isNotEmpty() && recent.first() <= slot - 60_000) recent.removeFirst()
+                if (recent.size >= limit) slot = maxOf(slot, recent.first() + 60_000)
+                recent.addLast(slot)
+            }
             nextSlot = slot + minIntervalMillis
             slot - now
         }
