@@ -44,7 +44,10 @@ actor SwiftDataF1Store: F1LocalStore {
     }
 
     func races(season: Int) -> [Race] { read([Race].self, key: "races-\(season)") ?? [] }
-    func replaceRaces(_ races: [Race], season: Int) { write(races, key: "races-\(season)") }
+    func replaceRaces(_ races: [Race], season: Int) {
+        write(races, key: "races-\(season)")
+        SharedCalendar.save(races)
+    }
 
     func driverStandings(season: Int) -> [DriverStanding] {
         read([DriverStanding].self, key: "driver-standings-\(season)") ?? []
@@ -66,6 +69,25 @@ actor SwiftDataF1Store: F1LocalStore {
     func replaceRaceResults(_ results: [RaceResult], season: Int, round: Int) {
         write(results, key: "results-\(season)-\(round)")
     }
+
+    func sprintResults(season: Int, round: Int) -> [RaceResult] {
+        read([RaceResult].self, key: "sprint-\(season)-\(round)") ?? []
+    }
+
+    func replaceSprintResults(_ results: [RaceResult], season: Int, round: Int) {
+        write(results, key: "sprint-\(season)-\(round)")
+    }
+
+    func qualifying(season: Int, round: Int) -> [QualifyingResult] {
+        read([QualifyingResult].self, key: "qualifying-\(season)-\(round)") ?? []
+    }
+
+    func replaceQualifying(_ results: [QualifyingResult], season: Int, round: Int) {
+        write(results, key: "qualifying-\(season)-\(round)")
+    }
+
+    func seasonResults(season: Int) -> [ScoredResult] { read([ScoredResult].self, key: "season-\(season)") ?? [] }
+    func replaceSeasonResults(_ results: [ScoredResult], season: Int) { write(results, key: "season-\(season)") }
 
     func driverProfile(id: String) -> DriverProfile? { read(DriverProfile.self, key: "driver-\(id)") }
     func saveDriverProfile(_ profile: DriverProfile) { write(profile, key: "driver-\(profile.driver.id)") }
