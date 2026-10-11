@@ -19,7 +19,15 @@ struct CalendarView: View {
         }
         .background(ApexColor.asphalt)
         .navigationTitle("Saison \(String(model.season))")
-        .task { await model.load(using: repository) }
+        .toolbar {
+            NavigationLink(value: AppRoute.reminders) {
+                Image(systemName: "bell.badge").accessibilityLabel("Rappels et widget")
+            }
+        }
+        .task {
+            await model.load(using: repository)
+            await ReminderScheduler.shared.reschedule()
+        }
     }
 
     private var content: some View {
