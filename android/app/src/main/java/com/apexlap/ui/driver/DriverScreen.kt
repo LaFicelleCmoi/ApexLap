@@ -31,6 +31,7 @@ import com.apexlap.ui.components.LoadingState
 import com.apexlap.ui.components.OfflineBanner
 import com.apexlap.ui.components.SectionHeader
 import com.apexlap.ui.components.StatTile
+import com.apexlap.ui.components.TitlesRow
 import com.apexlap.ui.components.flagOf
 import com.apexlap.ui.components.formatPoints
 import com.apexlap.ui.components.longDay
@@ -96,6 +97,11 @@ fun DriverScreen(onBack: () -> Unit, onConstructorClick: (String) -> Unit, viewM
                         StatTile("Points", standing.points.formatPoints(), teamColor, Modifier.weight(1f))
                         StatTile("Victoires", standing.wins.toString(), teamColor, Modifier.weight(1f))
                     }
+                }
+
+                if (state.titles.count > 0) {
+                    SectionHeader("Titres mondiaux")
+                    TitlesRow(state.titles)
                 }
 
                 SectionHeader("Carrière")
