@@ -107,8 +107,8 @@ extension ResultDTO {
             position: Int(position) ?? 0,
             positionText: positionText,
             points: Double(points) ?? 0,
-            grid: Int(grid) ?? 0,
-            laps: Int(laps) ?? 0,
+            grid: grid.flatMap { Int($0) } ?? 0,
+            laps: laps.flatMap { Int($0) } ?? 0,
             status: status,
             time: time?.time,
             fastestLapRank: fastestLap?.rank.flatMap { Int($0) },
@@ -116,5 +116,13 @@ extension ResultDTO {
             driver: driver.toDomain(),
             constructor: constructor.toDomain()
         )
+    }
+}
+
+extension QualifyingDTO {
+    func toDomain() -> QualifyingResult {
+        func clean(_ value: String?) -> String? { value?.isEmpty == false ? value : nil }
+        return QualifyingResult(position: Int(position) ?? 0, driver: driver.toDomain(), constructor: constructor.toDomain(),
+                                q1: clean(q1), q2: clean(q2), q3: clean(q3))
     }
 }
