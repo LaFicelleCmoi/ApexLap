@@ -148,3 +148,16 @@ fun Helmet(color: Color, modifier: Modifier = Modifier, size: Dp = 96.dp) {
         drawRect(Color.White.copy(alpha = 0.85f), topLeft = Offset(w * 0.10f, h * 0.66f), size = Size(w * 0.80f, h * 0.05f))
     }
 }
+
+/** World titles: count plus the seasons, most recent first. */
+@Composable
+fun TitlesRow(titles: com.apexlap.domain.encyclopedia.Titles, modifier: Modifier = Modifier) {
+    Row(modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+        StatTile("Titre" + if (titles.count > 1) "s" else "", "🏆 ${titles.count}", ApexColors.Gold, Modifier.width(120.dp))
+        Text(
+            titles.seasons.sortedDescending().joinToString(" · "),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f).padding(start = 12.dp),
+        )
+    }
+}
