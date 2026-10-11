@@ -1,6 +1,9 @@
 package com.apexlap.testing
 
+import com.apexlap.data.local.CircuitEntity
 import com.apexlap.data.local.ConstructorProfileEntity
+import com.apexlap.data.local.HistoricConstructorEntity
+import com.apexlap.data.local.HistoricDriverEntity
 import com.apexlap.data.local.ConstructorStandingEntity
 import com.apexlap.data.local.DriverProfileEntity
 import com.apexlap.data.local.DriverStandingEntity
@@ -20,6 +23,31 @@ class FakeF1Dao : F1Dao {
     val constructorStandings = MutableStateFlow<List<ConstructorStandingEntity>>(emptyList())
     val results = MutableStateFlow<List<RaceResultEntity>>(emptyList())
     val qualifying = MutableStateFlow<List<QualifyingResultEntity>>(emptyList())
+    val historicDrivers = MutableStateFlow<Map<String, HistoricDriverEntity>>(emptyMap())
+    val historicConstructors = MutableStateFlow<Map<String, HistoricConstructorEntity>>(emptyMap())
+    val circuits = MutableStateFlow<Map<String, CircuitEntity>>(emptyMap())
+
+    override fun observeHistoricDrivers(): Flow<List<HistoricDriverEntity>> =
+        historicDrivers.map { it.values.sortedWith(compareBy({ d -> d.driver.familyName }, { d -> d.driver.givenName })) }
+
+    override suspend fun historicDriverCount() = historicDrivers.value.size
+
+    override suspend fun upsertHistoricDrivers(rows: List<HistoricDriverEntity>) =
+        historicDrivers.update { it + rows.associateBy { r -> r.driver.driverId } }
+
+    override fun observeHistoricConstructors(): Flow<List<HistoricConstructorEntity>> =
+        historicConstructors.map { it.values.sortedBy { c -> c.constructor.name } }
+
+    override suspend fun historicConstructorCount() = historicConstructors.value.size
+
+    override suspend fun upsertHistoricConstructors(rows: List<HistoricConstructorEntity>) =
+        historicConstructors.update { it + rows.associateBy { r -> r.constructor.constructorId } }
+
+    override fun observeCircuits(): Flow<List<CircuitEntity>> = circuits.map { it.values.sortedBy { c -> c.name } }
+
+    override suspend fun circuitCount() = circuits.value.size
+
+    override suspend fun upsertCircuits(rows: List<CircuitEntity>) = circuits.update { it + rows.associateBy { r -> r.circuitId } }
     val driverProfiles = MutableStateFlow<Map<String, DriverProfileEntity>>(emptyMap())
     val constructorProfiles = MutableStateFlow<Map<String, ConstructorProfileEntity>>(emptyMap())
 
