@@ -4,6 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import com.apexlap.data.encyclopedia.EncyclopediaRepository
+import com.apexlap.domain.encyclopedia.Titles
 import com.apexlap.domain.model.DriverProfile
 import com.apexlap.domain.model.DriverStanding
 import com.apexlap.domain.repository.F1Repository
@@ -15,6 +17,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
@@ -24,6 +27,7 @@ data class DriverUiState(
     val profile: DriverProfile? = null,
     /** Current-season standing, also gives the driver's team (and therefore colours). */
     val standing: DriverStanding? = null,
+    val titles: Titles = Titles.NONE,
     val isRefreshing: Boolean = false,
     val error: String? = null,
 )
@@ -32,6 +36,7 @@ data class DriverUiState(
 class DriverViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     repository: F1Repository,
+    encyclopedia: EncyclopediaRepository,
     clock: Clock,
 ) : ViewModel() {
 
@@ -47,8 +52,10 @@ class DriverViewModel @Inject constructor(
     private val standing = repository.observeDriverStandings(season)
         .map { rows -> rows.firstOrNull { it.driver.id == driverId } }
 
-    val uiState: StateFlow<DriverUiState> = combine(profile.state, standing) { profile, standing ->
-        DriverUiState(season, profile.data, standing, profile.isRefreshing, profile.error)
+    private val titles = flow { emit(encyclopedia.champions().driverTitles(driverId)) }
+
+    val uiState: StateFlow<DriverUiState> = combine(profile.state, standing, titles) { profile, standing, titles ->
+        DriverUiState(season, profile.data, standing, titles, profile.isRefreshing, profile.error)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DriverUiState(season, isRefreshing = true))
 
     init {
