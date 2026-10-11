@@ -1,0 +1,22 @@
+// swift-tools-version: 6.0
+import PackageDescription
+
+// Platform-independent core of the iOS app (domain + data). It builds on Linux too, so the
+// business logic is tested in CI without a simulator.
+let package = Package(
+    name: "ApexLapKit",
+    platforms: [.iOS(.v17), .macOS(.v14)],
+    products: [
+        .library(name: "ApexLapDomain", targets: ["ApexLapDomain"]),
+        .library(name: "ApexLapData", targets: ["ApexLapData"]),
+    ],
+    targets: [
+        .target(name: "ApexLapDomain"),
+        .target(name: "ApexLapData", dependencies: ["ApexLapDomain"]),
+        .testTarget(
+            name: "ApexLapKitTests",
+            dependencies: ["ApexLapDomain", "ApexLapData"],
+            resources: [.copy("Fixtures")]
+        ),
+    ]
+)
