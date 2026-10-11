@@ -4,3 +4,4 @@ DerivedData/
 .build/
 .swiftpm/
 ApexLap/Info.plist
+ApexLapWidget/Info.plist
