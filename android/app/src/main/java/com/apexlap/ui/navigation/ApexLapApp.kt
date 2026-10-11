@@ -6,6 +6,7 @@ import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.FormatListNumbered
 import androidx.compose.material.icons.outlined.Insights
+import androidx.compose.material.icons.outlined.Sensors
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -28,16 +29,19 @@ import androidx.navigation.compose.rememberNavController
 import com.apexlap.ui.calendar.CalendarScreen
 import com.apexlap.ui.constructor.ConstructorScreen
 import com.apexlap.ui.driver.DriverScreen
+import com.apexlap.ui.live.LiveTimingScreen
 import com.apexlap.ui.race.RaceScreen
 import com.apexlap.ui.reminders.RemindersScreen
 import com.apexlap.ui.results.ResultsScreen
 import com.apexlap.ui.standings.StandingsScreen
 import com.apexlap.ui.stats.StatsScreen
+import com.apexlap.ui.telemetry.LapComparisonScreen
 import kotlinx.serialization.Serializable
 import kotlin.reflect.KClass
 
 @Serializable data object CalendarRoute
 @Serializable data object ResultsRoute
+@Serializable data object LiveRoute
 @Serializable data object StandingsRoute
 @Serializable data object StatsRoute
 @Serializable data class RaceRoute(val season: Int, val round: Int)
@@ -45,11 +49,15 @@ import kotlin.reflect.KClass
 @Serializable data class ConstructorRoute(val constructorId: String)
 @Serializable data object RemindersRoute
 
+/** [sessionKey] is an OpenF1 session, or -1 to let the screen pick the latest qualifying. */
+@Serializable data class TelemetryRoute(val sessionKey: Int = -1)
+
 private data class TopLevel(val route: Any, val routeClass: KClass<*>, val label: String, val icon: ImageVector)
 
 private val topLevels = listOf(
     TopLevel(CalendarRoute, CalendarRoute::class, "Calendrier", Icons.Outlined.Flag),
     TopLevel(ResultsRoute, ResultsRoute::class, "Résultats", Icons.Outlined.FormatListNumbered),
+    TopLevel(LiveRoute, LiveRoute::class, "Live", Icons.Outlined.Sensors),
     TopLevel(StandingsRoute, StandingsRoute::class, "Classements", Icons.Outlined.EmojiEvents),
     TopLevel(StatsRoute, StatsRoute::class, "Stats", Icons.Outlined.Insights),
 )
@@ -103,7 +111,16 @@ fun ApexLapApp(pendingRace: RaceRoute? = null, onPendingRaceOpened: () -> Unit =
                 ResultsScreen(onRaceClick = { navController.navigate(RaceRoute(it.season, it.round)) })
             }
             composable<StatsRoute> {
-                StatsScreen(onDriverClick = { navController.navigate(DriverRoute(it)) })
+                StatsScreen(
+                    onDriverClick = { navController.navigate(DriverRoute(it)) },
+                    onCompareLaps = { navController.navigate(TelemetryRoute()) },
+                )
+            }
+            composable<LiveRoute> {
+                LiveTimingScreen(onCompareLaps = { navController.navigate(TelemetryRoute(it ?: -1)) })
+            }
+            composable<TelemetryRoute> {
+                LapComparisonScreen(onBack = navController::popBackStack)
             }
             composable<StandingsRoute> {
                 StandingsScreen(
