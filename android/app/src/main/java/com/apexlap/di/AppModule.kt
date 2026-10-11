@@ -6,6 +6,9 @@ import com.apexlap.BuildConfig
 import com.apexlap.data.local.ApexLapDatabase
 import com.apexlap.data.local.F1Dao
 import com.apexlap.data.remote.JolpicaApi
+import com.apexlap.data.openf1.OpenF1Api
+import com.apexlap.data.openf1.OpenF1EmptyResultInterceptor
+import com.apexlap.data.openf1.OpenF1LiveStream
 import com.apexlap.data.remote.RateLimitInterceptor
 import com.apexlap.data.repository.OfflineFirstF1Repository
 import com.apexlap.domain.repository.F1Repository
@@ -24,6 +27,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import java.time.Instant
 import java.util.concurrent.TimeUnit
+import javax.inject.Qualifier
 import javax.inject.Singleton
 
 @Module
@@ -54,6 +58,40 @@ object NetworkModule {
         .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
         .build()
         .create(JolpicaApi::class.java)
+}
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class OpenF1Client
+
+@Module
+@InstallIn(SingletonComponent::class)
+object OpenF1Module {
+    @Provides
+    @Singleton
+    @OpenF1Client
+    fun provideOpenF1OkHttp(): OkHttpClient = OkHttpClient.Builder()
+        .connectTimeout(15, TimeUnit.SECONDS)
+        // A full race of intervals is several megabytes.
+        .readTimeout(60, TimeUnit.SECONDS)
+        .pingInterval(30, TimeUnit.SECONDS)
+        .addInterceptor(RateLimitInterceptor(minIntervalMillis = 350, maxPerMinute = 30))
+        .addInterceptor(OpenF1EmptyResultInterceptor())
+        .build()
+
+    @Provides
+    @Singleton
+    fun provideOpenF1Api(@OpenF1Client client: OkHttpClient, json: Json): OpenF1Api = Retrofit.Builder()
+        .baseUrl(OpenF1Api.BASE_URL)
+        .client(client)
+        .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+        .build()
+        .create(OpenF1Api::class.java)
+
+    @Provides
+    @Singleton
+    fun provideOpenF1LiveStream(@OpenF1Client client: OkHttpClient, json: Json): OpenF1LiveStream =
+        OpenF1LiveStream(client, json)
 }
 
 @Module
