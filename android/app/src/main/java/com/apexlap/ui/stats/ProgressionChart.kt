@@ -154,13 +154,13 @@ fun ProgressionChart(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ChartLegend(series: List<ChartSeries>, modifier: Modifier = Modifier) {
+fun ChartLegend(series: List<ChartSeries>, modifier: Modifier = Modifier, showValues: Boolean = true) {
     FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         series.forEach { s ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.width(14.dp).height(3.dp).clip(RoundedCornerShape(2.dp)).background(s.color))
                 Text(
-                    "${s.label} ${s.values.last().formatPoints()}",
+                    if (showValues) "${s.label} ${s.values.last().formatPoints()}" else s.label,
                     style = MaterialTheme.typography.labelMedium,
                     modifier = Modifier.padding(start = 6.dp),
                 )
