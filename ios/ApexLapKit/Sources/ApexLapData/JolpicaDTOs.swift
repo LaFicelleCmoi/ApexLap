@@ -82,6 +82,8 @@ struct RaceDTO: Decodable {
     let sprint: SessionDTO?
     let qualifying: SessionDTO?
     let results: [ResultDTO]?
+    let sprintResults: [ResultDTO]?
+    let qualifyingResults: [QualifyingDTO]?
 
     enum CodingKeys: String, CodingKey {
         case season, round, raceName, date, time
@@ -94,6 +96,23 @@ struct RaceDTO: Decodable {
         case sprint = "Sprint"
         case qualifying = "Qualifying"
         case results = "Results"
+        case sprintResults = "SprintResults"
+        case qualifyingResults = "QualifyingResults"
+    }
+}
+
+struct QualifyingDTO: Decodable {
+    let position: String
+    let driver: DriverDTO
+    let constructor: ConstructorDTO
+    let q1: String?
+    let q2: String?
+    let q3: String?
+    enum CodingKeys: String, CodingKey {
+        case position
+        case driver = "Driver"
+        case constructor = "Constructor"
+        case q1 = "Q1", q2 = "Q2", q3 = "Q3"
     }
 }
 
@@ -150,8 +169,8 @@ struct ResultDTO: Decodable {
     let position: String
     let positionText: String
     let points: String
-    let grid: String
-    let laps: String
+    let grid: String?
+    let laps: String?
     let status: String
     let driver: DriverDTO
     let constructor: ConstructorDTO
