@@ -1,5 +1,6 @@
 package com.apexlap.ui.encyclopedia
 
+import com.apexlap.i18n.LocalStrings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -52,8 +53,9 @@ fun SeasonScreen(
     viewModel: SeasonViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val strings = LocalStrings.current
 
-    DetailScaffold(title = "Saison ${state.season}", onBack = onBack) { padding ->
+    DetailScaffold(title = strings.seasonPageTitle(state.season), onBack = onBack) { padding ->
         LazyColumn(Modifier.padding(padding), contentPadding = PaddingValues(bottom = 24.dp)) {
             item { Timeline(state.previous, state.next, onSeasonClick) }
             if (state.isLoading) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
@@ -61,12 +63,12 @@ fun SeasonScreen(
             state.champion?.let { champion -> item { ChampionBanner(champion, onDriverClick, onConstructorClick) } }
 
             state.highlights?.let { highlights ->
-                item { SectionHeader("Moments forts") }
+                item { SectionHeader(strings.highlights) }
                 item { Highlights(highlights, isFinished = state.champion != null, onDriverClick) }
             }
 
             if (state.winners.isNotEmpty()) {
-                item { SectionHeader("Grands Prix · ${state.winners.size}") }
+                item { SectionHeader(strings.grandsPrixCount(state.winners.size)) }
                 items(state.winners, key = { "gp-${it.race.round}" }) { (race, winner) ->
                     Row(
                         Modifier.fillMaxWidth().clickable { onRaceClick(race.season, race.round) }.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -92,14 +94,14 @@ fun SeasonScreen(
             }
 
             if (state.drivers.isNotEmpty()) {
-                item { SectionHeader("Championnat pilotes") }
+                item { SectionHeader(strings.driversChampionship) }
                 items(state.drivers.take(STANDINGS_SHOWN), key = { "d-${it.driver.id}" }) { standing ->
                     StandingLine(standing.position, standing.constructor?.id, standing.driver.fullName,
                         standing.constructor?.name.orEmpty(), standing.points, standing.wins) { onDriverClick(standing.driver.id) }
                 }
             }
             if (state.constructors.isNotEmpty()) {
-                item { SectionHeader("Championnat constructeurs") }
+                item { SectionHeader(strings.constructorsChampionship) }
                 items(state.constructors.take(STANDINGS_SHOWN), key = { "c-${it.constructor.id}" }) { standing ->
                     StandingLine(standing.position, standing.constructor.id, standing.constructor.name,
                         standing.constructor.nationality, standing.points, standing.wins) { onConstructorClick(standing.constructor.id) }
@@ -107,7 +109,7 @@ fun SeasonScreen(
             } else if (state.season < 1958 && !state.isLoading) {
                 item {
                     Text(
-                        "Le championnat des constructeurs n'existe que depuis 1958.",
+                        strings.noConstructorsBefore1958,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(16.dp),
@@ -128,23 +130,23 @@ private fun Timeline(previous: Int?, next: Int?, onSeasonClick: (Int) -> Unit) {
 
 @Composable
 private fun Highlights(highlights: SeasonHighlights, isFinished: Boolean, onDriverClick: (String) -> Unit) {
+    val strings = LocalStrings.current
     Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         highlights.topWinner?.let { (driver, wins) ->
-            HighlightLine("🏁", "${driver.fullName} remporte le plus de Grands Prix ($wins)") { onDriverClick(driver.id) }
+            HighlightLine("🏁", strings.mostWinsHighlight(driver.fullName, wins)) { onDriverClick(driver.id) }
         }
-        highlights.topTeam?.let { (team, wins) -> HighlightLine("🏎", "${team.name} totalise $wins victoire" + if (wins > 1) "s" else "") }
-        HighlightLine("👥", "${highlights.differentWinners} vainqueur" + (if (highlights.differentWinners > 1) "s différents" else " unique"))
+        highlights.topTeam?.let { (team, wins) -> HighlightLine("🏎", strings.teamWinsHighlight(team.name, wins)) }
+        HighlightLine("👥", strings.differentWinners(highlights.differentWinners))
         if (highlights.winsFromPole > 0) {
-            HighlightLine("🟣", "${highlights.winsFromPole} victoire" + (if (highlights.winsFromPole > 1) "s" else "") + " depuis la pole position")
+            HighlightLine("🟣", strings.winsFromPole(highlights.winsFromPole))
         }
         highlights.deepestWin?.let { (race, winner) ->
-            HighlightLine("🚀", "${winner.driver.fullName} gagne en partant ${winner.grid}e (${race.name})") { onDriverClick(winner.driver.id) }
+            HighlightLine("🚀", strings.deepestWin(winner.driver.fullName, winner.grid, race.name)) { onDriverClick(winner.driver.id) }
         }
         val margin = highlights.titleMargin
         val runnerUp = highlights.runnerUp
         if (margin != null && runnerUp != null) {
-            val label = if (isFinished) "Titre joué avec ${margin.formatPoints()} pts d'avance sur" else "${margin.formatPoints()} pts d'avance sur"
-            HighlightLine("⚖", "$label ${runnerUp.driver.fullName}") { onDriverClick(runnerUp.driver.id) }
+            HighlightLine("⚖", strings.titleMargin(margin.formatPoints(), runnerUp.driver.fullName, isFinished)) { onDriverClick(runnerUp.driver.id) }
         }
     }
 }
@@ -162,6 +164,7 @@ private fun HighlightLine(icon: String, text: String, onClick: (() -> Unit)? = n
 
 @Composable
 private fun ChampionBanner(champion: Champion, onDriverClick: (String) -> Unit, onConstructorClick: (String) -> Unit) {
+    val strings = LocalStrings.current
     val color = TeamColors.of(champion.driver.teamId)
     Surface(Modifier.fillMaxWidth().padding(16.dp), shape = RoundedCornerShape(20.dp), color = ApexColors.Carbon) {
         Column(
@@ -169,15 +172,15 @@ private fun ChampionBanner(champion: Champion, onDriverClick: (String) -> Unit, 
                 .background(Brush.horizontalGradient(listOf(ApexColors.Gold.copy(alpha = 0.35f), ApexColors.Carbon)))
                 .padding(20.dp),
         ) {
-            Text("🏆 CHAMPION DU MONDE", style = MaterialTheme.typography.labelMedium, color = ApexColors.Gold)
+            Text(strings.worldChampion, style = MaterialTheme.typography.labelMedium, color = ApexColors.Gold)
             Text(
                 champion.driver.name,
                 style = MaterialTheme.typography.headlineMedium,
                 modifier = Modifier.clickable { onDriverClick(champion.driver.id) },
             )
             Text(
-                "${flagOf(champion.driver.nationality)} ${champion.driver.team.orEmpty()} · ${champion.driver.points.formatPoints()} pts · " +
-                    "${champion.driver.wins} victoire" + (if (champion.driver.wins > 1) "s" else "") + " en ${champion.races} GP",
+                flagOf(champion.driver.nationality) + " " +
+                    strings.championLine(champion.driver.team.orEmpty(), champion.driver.points.formatPoints(), champion.driver.wins, champion.races),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -187,8 +190,8 @@ private fun ChampionBanner(champion: Champion, onDriverClick: (String) -> Unit, 
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box(Modifier.width(4.dp).padding(vertical = 2.dp).background(TeamColors.of(team.id), RoundedCornerShape(2.dp)))
-                    Text("Constructeurs : ", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("${team.name} · ${team.points.formatPoints()} pts", style = MaterialTheme.typography.titleSmall)
+                    Text(strings.constructorsPrefix, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("${team.name} · ${team.points.formatPoints()} ${strings.pts}", style = MaterialTheme.typography.titleSmall)
                 }
             }
             Box(Modifier.padding(top = 2.dp).width(48.dp).background(color, RoundedCornerShape(2.dp)))
@@ -211,7 +214,7 @@ private fun StandingLine(position: Int, teamId: String?, title: String, subtitle
         }
         Column(horizontalAlignment = Alignment.End) {
             Text(points.formatPoints(), style = MaterialTheme.typography.titleSmall)
-            if (wins > 0) Text("$wins VICT.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (wins > 0) Text(LocalStrings.current.winsShort(wins), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
