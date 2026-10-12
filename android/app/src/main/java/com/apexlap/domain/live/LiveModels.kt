@@ -42,14 +42,8 @@ data class Stint(
     val tyreAgeAtStart: Int,
 )
 
-enum class TrackStatus(val label: String) {
-    GREEN("Piste dégagée"),
-    YELLOW("Drapeau jaune"),
-    VSC("Virtual Safety Car"),
-    SAFETY_CAR("Safety Car"),
-    RED("Drapeau rouge"),
-    CHEQUERED("Drapeau à damier"),
-}
+/** Labels are localised by `Strings.trackStatus`. */
+enum class TrackStatus { GREEN, YELLOW, VSC, SAFETY_CAR, RED, CHEQUERED }
 
 sealed interface TimingEvent {
     val date: Instant
