@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.apexlap.data.encyclopedia.EncyclopediaRepository
 import com.apexlap.domain.encyclopedia.Titles
+import com.apexlap.domain.encyclopedia.constructorBio
 import com.apexlap.domain.model.ConstructorProfile
 import com.apexlap.domain.model.ConstructorStanding
 import com.apexlap.domain.model.DriverStanding
@@ -30,6 +31,7 @@ data class ConstructorUiState(
     val titles: Titles = Titles.NONE,
     val isRefreshing: Boolean = false,
     val error: String? = null,
+    val bio: String? = null,
 )
 
 @HiltViewModel
@@ -55,10 +57,12 @@ class ConstructorViewModel @Inject constructor(
         repository.observeDriverStandings(season),
         flow { emit(encyclopedia.champions().constructorTitles(constructorId)) },
     ) { profile, teams, drivers, titles ->
+        val standing = teams.firstOrNull { it.constructor.id == constructorId }
         ConstructorUiState(
             season = season,
             profile = profile.data,
-            standing = teams.firstOrNull { it.constructor.id == constructorId },
+            standing = standing,
+            bio = profile.data?.let { constructorBio(it, titles, standing, season) },
             drivers = drivers.filter { it.constructor?.id == constructorId },
             titles = titles,
             isRefreshing = profile.isRefreshing,
