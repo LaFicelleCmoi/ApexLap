@@ -3,6 +3,20 @@ package com.apexlap.encyclopedia
 import com.apexlap.data.encyclopedia.ChampionsAsset
 import com.apexlap.data.encyclopedia.EncyclopediaRepository
 import com.apexlap.domain.encyclopedia.ChampionsRegistry
+import com.apexlap.domain.encyclopedia.CircuitGuides
+import com.apexlap.domain.encyclopedia.GrandPrixFacts
+import com.apexlap.domain.encyclopedia.SeasonHighlights
+import com.apexlap.domain.encyclopedia.SeasonWinner
+import com.apexlap.domain.encyclopedia.Titles
+import com.apexlap.domain.encyclopedia.driverBio
+import com.apexlap.domain.encyclopedia.formatSeasons
+import com.apexlap.domain.encyclopedia.parseLapTime
+import com.apexlap.data.remote.dto.RaceTableData
+import com.apexlap.data.remote.toDomain
+import com.apexlap.domain.model.CareerStats
+import com.apexlap.domain.model.DriverProfile
+import com.apexlap.testing.decodeFixture
+import java.time.LocalDate
 import com.apexlap.domain.encyclopedia.Glossary
 import com.apexlap.domain.encyclopedia.matchesSearch
 import com.apexlap.testing.FakeF1Dao
@@ -79,5 +93,83 @@ class EncyclopediaTest {
         assertEquals(1, history.grandsPrix)
         assertEquals(2026, history.firstSeason)
         assertEquals("max_verstappen", history.topDrivers().single().first.id)
+    }
+
+    private val singapore = decodeFixture<com.apexlap.data.remote.dto.JolpicaResponse<RaceTableData>>("results_singapore_2026.json")
+        .data.raceTable.races.first()
+    private val results = singapore.results.map { it.toDomain() }
+
+    @Test
+    fun `lap times are parsed to milliseconds`() {
+        assertEquals(81_046L, parseLapTime("1:21.046"))
+        assertEquals(58_123L, parseLapTime("58.123"))
+        assertNull(parseLapTime("DNF"))
+    }
+
+    @Test
+    fun `consecutive title seasons collapse into ranges`() {
+        assertEquals("2008, 2014–2015, 2017–2020", formatSeasons(listOf(2020, 2008, 2014, 2015, 2017, 2018, 2019)))
+    }
+
+    @Test
+    fun `driver bio mentions age, titles and career`() {
+        val driver = results.first().driver.copy(dateOfBirth = LocalDate.of(1997, 9, 30))
+        val bio = driverBio(
+            DriverProfile(driver, CareerStats(seasons = 12, races = 230, wins = 70, podiums = 120, poles = 45)),
+            Titles(4, listOf(2021, 2022, 2023, 2024)),
+            standing = null,
+            season = 2026,
+            today = LocalDate.of(2026, 10, 12),
+        )
+        assertTrue(bio, bio.contains("(29 ans)"))
+        assertTrue(bio, bio.contains("4 fois champion du monde (2021–2024)"))
+        assertTrue(bio, bio.contains("230 Grands Prix en 12 saisons : 70 victoires"))
+    }
+
+    @Test
+    fun `grand prix facts give winner, pole and fastest lap`() {
+        val facts = GrandPrixFacts.of(results, emptyList())
+        assertEquals(results.first { it.position == 1 }.driver, facts.winner?.driver)
+        assertEquals(results.firstOrNull { it.grid == 1 }?.driver, facts.pole)
+        assertEquals(results.firstOrNull { it.hasFastestLap }, facts.fastestLap)
+        assertTrue(GrandPrixFacts.of(emptyList(), emptyList()).isEmpty)
+    }
+
+    @Test
+    fun `season highlights count winners and the title margin`() {
+        val race = singapore.toDomain()
+        val first = results[0]
+        val second = results[1]
+        val winners = listOf(
+            SeasonWinner(race.copy(round = 1), first.copy(grid = 1)),
+            SeasonWinner(race.copy(round = 2), first.copy(grid = 4)),
+            SeasonWinner(race.copy(round = 3), second.copy(grid = 9)),
+        )
+        val standings = listOf(
+            com.apexlap.domain.model.DriverStanding(1, 300.0, 2, first.driver, first.constructor),
+            com.apexlap.domain.model.DriverStanding(2, 288.0, 1, second.driver, second.constructor),
+        )
+        val highlights = SeasonHighlights.of(winners, standings)
+        assertEquals(2, highlights.differentWinners)
+        assertEquals(first.driver to 2, highlights.topWinner)
+        assertEquals(1, highlights.winsFromPole)
+        assertEquals(9, highlights.deepestWin?.winner?.grid)
+        assertEquals(12.0, highlights.titleMargin!!, 0.0)
+    }
+
+    @Test
+    fun `circuit guides exist for the calendar circuits`() {
+        assertTrue(CircuitGuides.of("spa")!!.corners.any { it.name.contains("Eau Rouge") })
+        assertNull(CircuitGuides.of("unknown"))
+    }
+
+    @Test
+    fun `grand prix context counts editions before the season`() = runTest {
+        val repository = EncyclopediaRepository(android.app.Application(), FakeJolpicaApi(), FakeF1Dao(), testJson)
+        val history = repository.circuitHistory("marina_bay")
+        assertEquals(1, history.contextFor(2026).edition)
+        assertNull(history.contextFor(2026).previousWinner)
+        assertEquals(2, history.contextFor(2027).edition)
+        assertEquals(2026, history.contextFor(2027).previousWinner?.season)
     }
 }
