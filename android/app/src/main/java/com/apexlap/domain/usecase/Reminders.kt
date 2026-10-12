@@ -7,10 +7,11 @@ import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
 
-enum class ReminderScope(val label: String) {
-    ALL_SESSIONS("Toutes les séances"),
-    COMPETITIVE("Qualifs, sprints et courses"),
-    RACES_ONLY("Courses uniquement");
+/** Labels are localised by `Strings.reminderScope`. */
+enum class ReminderScope {
+    ALL_SESSIONS,
+    COMPETITIVE,
+    RACES_ONLY;
 
     fun includes(type: SessionType): Boolean = when (this) {
         ALL_SESSIONS -> true
