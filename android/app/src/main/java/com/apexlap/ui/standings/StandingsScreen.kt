@@ -1,5 +1,10 @@
 package com.apexlap.ui.standings
 
+import androidx.compose.foundation.background
+import com.apexlap.i18n.LocalStrings
+import com.apexlap.i18n.Strings
+import com.apexlap.ui.favorites.FavoritesViewModel
+import com.apexlap.ui.theme.ApexColors
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -50,20 +55,23 @@ fun StandingsScreen(
     onDriverClick: (String) -> Unit,
     onConstructorClick: (String) -> Unit,
     viewModel: StandingsViewModel = hiltViewModel(),
+    favoritesViewModel: FavoritesViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val favorites by favoritesViewModel.uiState.collectAsStateWithLifecycle()
+    val strings = LocalStrings.current
     var tab by rememberSaveable { mutableIntStateOf(0) }
 
     Column(Modifier.fillMaxSize()) {
         Text(
-            "CHAMPIONNAT ${state.season}",
+            strings.championshipTitle(state.season),
             style = MaterialTheme.typography.displaySmall,
             modifier = Modifier.statusBarsPadding().padding(start = 16.dp, top = 16.dp, end = 16.dp),
         )
         OutlinedTextField(
             value = state.query,
             onValueChange = viewModel::onQueryChange,
-            placeholder = { Text("Rechercher un pilote, une écurie…") },
+            placeholder = { Text(strings.searchDriverTeam) },
             leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
             singleLine = true,
             shape = RoundedCornerShape(14.dp),
@@ -71,8 +79,8 @@ fun StandingsScreen(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
         )
         PrimaryTabRow(selectedTabIndex = tab, containerColor = MaterialTheme.colorScheme.background) {
-            Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("PILOTES") })
-            Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("CONSTRUCTEURS") })
+            Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text(strings.drivers) })
+            Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text(strings.constructors) })
         }
         state.error?.let { OfflineBanner(it, viewModel::refresh) }
 
@@ -80,14 +88,16 @@ fun StandingsScreen(
         PullToRefreshBox(isRefreshing = state.isRefreshing && !drivers.isNullOrEmpty(), onRefresh = viewModel::refresh) {
             when {
                 drivers.isNullOrEmpty() && state.isRefreshing && state.query.isEmpty() -> LoadingState()
-                tab == 0 && drivers.isNullOrEmpty() -> EmptyState(emptyMessage(state), onRetry = viewModel::refresh)
-                tab == 1 && state.constructors.isNullOrEmpty() -> EmptyState(emptyMessage(state), onRetry = viewModel::refresh)
+                tab == 0 && drivers.isNullOrEmpty() -> EmptyState(emptyMessage(state, strings), onRetry = viewModel::refresh)
+                tab == 1 && state.constructors.isNullOrEmpty() -> EmptyState(emptyMessage(state, strings), onRetry = viewModel::refresh)
                 tab == 0 -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 8.dp)) {
-                    items(drivers.orEmpty(), key = { it.driver.id }) { DriverStandingRow(it, onClick = { onDriverClick(it.driver.id) }) }
+                    items(drivers.orEmpty(), key = { it.driver.id }) {
+                        DriverStandingRow(it, isFavorite = it.driver.id == favorites.driverId, onClick = { onDriverClick(it.driver.id) })
+                    }
                 }
                 else -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 8.dp)) {
                     items(state.constructors.orEmpty(), key = { it.constructor.id }) {
-                        ConstructorStandingRow(it, onClick = { onConstructorClick(it.constructor.id) })
+                        ConstructorStandingRow(it, isFavorite = it.constructor.id == favorites.constructorId, onClick = { onConstructorClick(it.constructor.id) })
                     }
                 }
             }
@@ -95,11 +105,11 @@ fun StandingsScreen(
     }
 }
 
-private fun emptyMessage(state: StandingsUiState) =
-    if (state.query.isNotBlank()) "Aucun résultat pour « ${state.query} »" else state.error ?: "Pas encore de classement"
+private fun emptyMessage(state: StandingsUiState, strings: Strings) =
+    if (state.query.isNotBlank()) strings.noResultFor(state.query) else state.error ?: strings.noStandingsYet
 
 @Composable
-private fun DriverStandingRow(standing: DriverStanding, onClick: () -> Unit) {
+private fun DriverStandingRow(standing: DriverStanding, isFavorite: Boolean, onClick: () -> Unit) {
     StandingRow(
         position = standing.position,
         teamId = standing.constructor?.id,
@@ -107,12 +117,13 @@ private fun DriverStandingRow(standing: DriverStanding, onClick: () -> Unit) {
         subtitle = standing.constructor?.name.orEmpty(),
         points = standing.points,
         wins = standing.wins,
+        isFavorite = isFavorite,
         onClick = onClick,
     )
 }
 
 @Composable
-private fun ConstructorStandingRow(standing: ConstructorStanding, onClick: () -> Unit) {
+private fun ConstructorStandingRow(standing: ConstructorStanding, isFavorite: Boolean, onClick: () -> Unit) {
     StandingRow(
         position = standing.position,
         teamId = standing.constructor.id,
@@ -120,6 +131,7 @@ private fun ConstructorStandingRow(standing: ConstructorStanding, onClick: () ->
         subtitle = standing.constructor.nationality,
         points = standing.points,
         wins = standing.wins,
+        isFavorite = isFavorite,
         onClick = onClick,
     )
 }
@@ -132,22 +144,27 @@ private fun StandingRow(
     subtitle: String,
     points: Double,
     wins: Int,
+    isFavorite: Boolean,
     onClick: () -> Unit,
 ) {
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 10.dp),
+        Modifier
+            .fillMaxWidth()
+            .then(if (isFavorite) Modifier.background(ApexColors.Gold.copy(alpha = 0.12f)) else Modifier)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         PositionText(position)
         TeamStripe(TeamColors.of(teamId), height = 34.dp)
         Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleSmall)
+            Text(if (isFavorite) "$title  ★" else title, style = MaterialTheme.typography.titleSmall)
             Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Column(horizontalAlignment = Alignment.End) {
             Text(points.formatPoints(), style = MaterialTheme.typography.titleMedium)
-            Text(if (wins > 0) "$wins VICT." else "PTS", style = MaterialTheme.typography.labelSmall,
+            Text(if (wins > 0) LocalStrings.current.winsShort(wins) else LocalStrings.current.ptsUpper, style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
