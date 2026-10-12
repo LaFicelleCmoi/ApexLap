@@ -1,5 +1,6 @@
 package com.apexlap.ui.results
 
+import com.apexlap.i18n.LocalStrings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -41,19 +42,20 @@ import com.apexlap.ui.theme.TeamColors
 @Composable
 fun ResultsScreen(onRaceClick: (Race) -> Unit, viewModel: ResultsViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val strings = LocalStrings.current
     val races = state.races
 
     PullToRefreshBox(isRefreshing = state.isRefreshing && !races.isNullOrEmpty(), onRefresh = { viewModel.refresh(force = true) }) {
         when {
             races.isNullOrEmpty() && state.isRefreshing -> LoadingState()
             races.isNullOrEmpty() -> EmptyState(
-                state.error ?: "Aucun Grand Prix terminé en ${state.season}",
+                state.error ?: strings.noFinishedGrandPrix(state.season),
                 onRetry = { viewModel.refresh(force = true) },
             )
             else -> LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
                 item {
                     Text(
-                        "RÉSULTATS ${state.season}",
+                        strings.resultsTitle(state.season),
                         style = MaterialTheme.typography.displaySmall,
                         modifier = Modifier.statusBarsPadding().padding(16.dp),
                     )
@@ -81,7 +83,7 @@ private fun RaceSummaryCard(summary: RaceSummary, onClick: () -> Unit) {
                 Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
                     Text(race.name, style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "MANCHE ${race.round}" + (race.raceSession?.date?.let { " · ${it.shortDay()}" } ?: ""),
+                        LocalStrings.current.round(race.round) + (race.raceSession?.date?.let { " · ${it.shortDay()}" } ?: ""),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
