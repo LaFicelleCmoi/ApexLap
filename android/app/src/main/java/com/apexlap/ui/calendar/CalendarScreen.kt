@@ -19,6 +19,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.NotificationsActive
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -37,17 +39,23 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.apexlap.domain.model.Countdown
+import com.apexlap.i18n.LocalStrings
+import com.apexlap.ui.favorites.FavoritesUiState
+import com.apexlap.ui.favorites.FavoritesViewModel
 import com.apexlap.domain.model.Race
 import com.apexlap.domain.usecase.UpcomingSession
 import com.apexlap.ui.components.EmptyState
 import com.apexlap.ui.components.LoadingState
 import com.apexlap.ui.components.OfflineBanner
 import com.apexlap.ui.components.SectionHeader
+import com.apexlap.ui.components.TeamStripe
 import com.apexlap.ui.components.flagOf
+import com.apexlap.ui.components.formatPoints
 import com.apexlap.ui.components.localDay
 import com.apexlap.ui.components.localTime
 import com.apexlap.ui.components.shortDay
 import com.apexlap.ui.theme.ApexColors
+import com.apexlap.ui.theme.TeamColors
 import java.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -56,27 +64,36 @@ fun CalendarScreen(
     onRaceClick: (Race) -> Unit,
     onRemindersClick: () -> Unit,
     onEncyclopediaClick: () -> Unit,
+    onSettingsClick: () -> Unit,
+    onDriverClick: (String) -> Unit,
+    onConstructorClick: (String) -> Unit,
     viewModel: CalendarViewModel = hiltViewModel(),
+    favoritesViewModel: FavoritesViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val favorites by favoritesViewModel.uiState.collectAsStateWithLifecycle()
+    val strings = LocalStrings.current
     val races = state.races
 
     PullToRefreshBox(isRefreshing = state.isRefreshing && !races.isNullOrEmpty(), onRefresh = viewModel::refresh) {
         when {
             races.isNullOrEmpty() && state.isRefreshing -> LoadingState()
-            races.isNullOrEmpty() -> EmptyState(state.error ?: "Aucun Grand Prix pour ${state.season}", onRetry = viewModel::refresh)
+            races.isNullOrEmpty() -> EmptyState(state.error ?: strings.noGrandPrix(state.season), onRetry = viewModel::refresh)
             else -> LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
                 item {
                     Row(
                         Modifier.statusBarsPadding().padding(start = 16.dp, top = 16.dp, end = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text("SAISON ${state.season}", style = MaterialTheme.typography.displaySmall, modifier = Modifier.weight(1f))
+                        Text(strings.seasonTitle(state.season), style = MaterialTheme.typography.displaySmall, modifier = Modifier.weight(1f))
                         IconButton(onClick = onEncyclopediaClick) {
-                            Icon(Icons.Outlined.MenuBook, contentDescription = "Encyclopédie")
+                            Icon(Icons.Outlined.MenuBook, contentDescription = strings.encyclopedia)
                         }
                         IconButton(onClick = onRemindersClick) {
-                            Icon(Icons.Outlined.NotificationsActive, contentDescription = "Rappels de séance")
+                            Icon(Icons.Outlined.NotificationsActive, contentDescription = strings.sessionReminders)
+                        }
+                        IconButton(onClick = onSettingsClick) {
+                            Icon(Icons.Outlined.Settings, contentDescription = strings.settings)
                         }
                     }
                 }
@@ -86,7 +103,8 @@ fun CalendarScreen(
                         NextRaceHero(race, state.nextSession, state.countdown, onClick = { onRaceClick(race) })
                     }
                 }
-                item { SectionHeader("Calendrier") }
+                item { FavoritesCard(favorites, onDriverClick, onConstructorClick, onSettingsClick) }
+                item { SectionHeader(strings.calendar) }
                 items(races, key = { it.round }) { race ->
                     RaceRow(race, now = state.now, isNext = race.round == state.nextRace?.round, onClick = { onRaceClick(race) })
                 }
@@ -108,14 +126,14 @@ private fun NextRaceHero(race: Race, next: UpcomingSession?, countdown: Countdow
             ),
         ) {
             Column(Modifier.padding(20.dp)) {
-                Text("PROCHAIN GRAND PRIX · MANCHE ${race.round}", style = MaterialTheme.typography.labelMedium)
+                Text(LocalStrings.current.nextGrandPrix(race.round), style = MaterialTheme.typography.labelMedium)
                 Spacer(Modifier.height(6.dp))
                 Text("${flagOf(race.circuit.country)}  ${race.name}", style = MaterialTheme.typography.headlineMedium)
                 Text(race.circuit.name, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (next != null && countdown != null) {
                     Spacer(Modifier.height(16.dp))
                     Text(
-                        "${next.session.type.label.uppercase()} · ${next.session.startsAt?.localDay()} ${next.session.startsAt?.localTime()}",
+                        "${LocalStrings.current.session(next.session.type).uppercase()} · ${next.session.startsAt?.localDay()} ${next.session.startsAt?.localTime()}",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -129,11 +147,12 @@ private fun NextRaceHero(race: Race, next: UpcomingSession?, countdown: Countdow
 
 @Composable
 fun CountdownRow(countdown: Countdown) {
+    val strings = LocalStrings.current
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        CountdownUnit(countdown.days, "JOURS")
-        CountdownUnit(countdown.hours, "H")
-        CountdownUnit(countdown.minutes, "MIN")
-        CountdownUnit(countdown.seconds, "SEC")
+        CountdownUnit(countdown.days, strings.days)
+        CountdownUnit(countdown.hours, strings.hoursShort)
+        CountdownUnit(countdown.minutes, strings.minutesShort)
+        CountdownUnit(countdown.seconds, strings.secondsShort)
     }
 }
 
@@ -187,10 +206,77 @@ private fun RaceRow(race: Race, now: Instant, isNext: Boolean, onClick: () -> Un
                 style = MaterialTheme.typography.labelMedium,
             )
             if (finished) {
-                Text("TERMINÉ", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(LocalStrings.current.finished, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else if (isNext) {
-                Text("PROCHAIN", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                Text(LocalStrings.current.next, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
             }
         }
+    }
+}
+
+/** The followed driver and team at a glance, or an invitation to pick them. */
+@Composable
+private fun FavoritesCard(
+    favorites: FavoritesUiState,
+    onDriverClick: (String) -> Unit,
+    onConstructorClick: (String) -> Unit,
+    onSettingsClick: () -> Unit,
+) {
+    val strings = LocalStrings.current
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+    ) {
+        if (!favorites.hasFavorites) {
+            Row(
+                Modifier.clickable(onClick = onSettingsClick).padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Filled.Star, contentDescription = null, tint = ApexColors.Gold)
+                Text(strings.chooseFavorites, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
+                Text("›", style = MaterialTheme.typography.titleLarge)
+            }
+            return@Surface
+        }
+        Column(Modifier.padding(vertical = 8.dp)) {
+            Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Filled.Star, contentDescription = null, tint = ApexColors.Gold, modifier = Modifier.padding(end = 6.dp))
+                Text(strings.myFavorites.uppercase(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            favorites.driverId?.let { id ->
+                val standing = favorites.driver
+                FavoriteRow(
+                    teamId = standing?.constructor?.id,
+                    title = standing?.let { "${flagOf(it.driver.nationality)}  ${it.driver.fullName}" } ?: id,
+                    subtitle = standing?.let { strings.standingLine(it.position, it.points.formatPoints(), it.wins) } ?: strings.notRankedYet,
+                    onClick = { onDriverClick(id) },
+                )
+            }
+            favorites.constructorId?.let { id ->
+                val standing = favorites.constructor
+                FavoriteRow(
+                    teamId = id,
+                    title = standing?.constructor?.name ?: id,
+                    subtitle = standing?.let { strings.standingLine(it.position, it.points.formatPoints(), it.wins) } ?: strings.notRankedYet,
+                    onClick = { onConstructorClick(id) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FavoriteRow(teamId: String?, title: String, subtitle: String, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        TeamStripe(TeamColors.of(teamId), height = 32.dp)
+        Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+            Text(title, style = MaterialTheme.typography.titleSmall)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Text("›", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
