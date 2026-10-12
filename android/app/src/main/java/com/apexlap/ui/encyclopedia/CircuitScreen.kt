@@ -1,5 +1,6 @@
 package com.apexlap.ui.encyclopedia
 
+import com.apexlap.i18n.LocalStrings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -98,11 +99,13 @@ fun CircuitScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val history = state.history
+    val strings = LocalStrings.current
+    val language = strings.language
 
-    DetailScaffold(title = history?.circuit?.name ?: "Circuit", onBack = onBack) { padding ->
+    DetailScaffold(title = history?.circuit?.name ?: strings.circuit, onBack = onBack) { padding ->
         when {
             history == null && state.isLoading -> LoadingState(Modifier.padding(padding))
-            history == null -> EmptyState(state.error ?: "Circuit introuvable", Modifier.padding(padding), viewModel::load)
+            history == null -> EmptyState(state.error ?: strings.circuitNotFound, Modifier.padding(padding), viewModel::load)
             else -> LazyColumn(Modifier.padding(padding), contentPadding = PaddingValues(bottom = 24.dp)) {
                 item {
                     Column(Modifier.padding(horizontal = 16.dp)) {
@@ -113,31 +116,31 @@ fun CircuitScreen(
                 }
                 item {
                     Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        StatTile("Grands Prix", history.grandsPrix.toString(), MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
-                        StatTile("Premier", history.firstSeason?.toString() ?: "—", MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
-                        StatTile("Dernier", history.lastSeason?.toString() ?: "—", MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
+                        StatTile(strings.statGrandsPrix, history.grandsPrix.toString(), MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
+                        StatTile(strings.statFirst, history.firstSeason?.toString() ?: "—", MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
+                        StatTile(strings.statLast, history.lastSeason?.toString() ?: "—", MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
                     }
                 }
                 CircuitGuides.of(history.circuit.id)?.let { guide ->
                     item {
-                        Text(guide.summary, style = MaterialTheme.typography.bodyMedium,
+                        Text(guide.summary[language], style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
                     }
-                    item { SectionHeader("Virages clés") }
-                    items(guide.corners, key = { "corner-${it.name}" }) { corner ->
+                    item { SectionHeader(strings.keyCorners) }
+                    items(guide.corners, key = { "corner-${it.name.fr}" }) { corner ->
                         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
-                            Text(corner.name, style = MaterialTheme.typography.titleSmall)
-                            Text(corner.description, style = MaterialTheme.typography.bodySmall,
+                            Text(corner.name[language], style = MaterialTheme.typography.titleSmall)
+                            Text(corner.description[language], style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
                 state.records?.takeIf { it.raceLap != null || it.poleSitters.isNotEmpty() }?.let { records ->
-                    item { SectionHeader("Records") }
+                    item { SectionHeader(strings.records) }
                     records.raceLap?.let { lap ->
                         item {
                             RecordRow(
-                                label = "Record du tour en course",
+                                label = strings.raceLapRecord,
                                 value = lap.time,
                                 detail = "${lap.driver.fullName} · ${lap.constructor.name} · ${lap.season}",
                                 onClick = { onDriverClick(lap.driver.id) },
@@ -147,7 +150,7 @@ fun CircuitScreen(
                     records.poleSitters.firstOrNull()?.let { (driver, poles) ->
                         item {
                             RecordRow(
-                                label = "Le plus de départs en pole",
+                                label = strings.mostPoleStarts,
                                 value = poles.toString(),
                                 detail = records.poleSitters.joinToString("  ·  ") { (d, n) -> "${d.familyName} $n" },
                                 onClick = { onDriverClick(driver.id) },
@@ -156,7 +159,7 @@ fun CircuitScreen(
                     }
                     item {
                         Text(
-                            "Temps au tour connus depuis 2004, toutes configurations du circuit confondues.",
+                            strings.recordsNote,
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
@@ -164,16 +167,16 @@ fun CircuitScreen(
                     }
                 }
                 if (history.wins.isEmpty()) {
-                    item { EmptyState("Aucun Grand Prix disputé ici pour l'instant") }
+                    item { EmptyState(strings.noGrandPrixHereYet) }
                 } else {
-                    item { SectionHeader("Rois du circuit") }
+                    item { SectionHeader(strings.kingsOfCircuit) }
                     items(history.topDrivers(), key = { "top-${it.first.id}" }) { (driver, wins) ->
                         Row(
                             Modifier.fillMaxWidth().clickable { onDriverClick(driver.id) }.padding(horizontal = 16.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text("${flagOf(driver.nationality)}  ${driver.fullName}", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                            Text("$wins victoire" + if (wins > 1) "s" else "", style = MaterialTheme.typography.labelMedium, color = ApexColors.Gold)
+                            Text(strings.wins(wins), style = MaterialTheme.typography.labelMedium, color = ApexColors.Gold)
                         }
                     }
                     item {
@@ -184,7 +187,7 @@ fun CircuitScreen(
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
                         )
                     }
-                    item { SectionHeader("Palmarès") }
+                    item { SectionHeader(strings.roll) }
                     items(history.wins, key = { "${it.season}-${it.round}" }) { win ->
                         Row(
                             Modifier.fillMaxWidth().clickable { onRaceClick(win.season, win.round) }.padding(horizontal = 16.dp, vertical = 8.dp),
