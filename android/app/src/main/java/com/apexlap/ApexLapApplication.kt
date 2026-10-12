@@ -14,7 +14,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
@@ -31,8 +30,9 @@ class ApexLapApplication : Application() {
         // The language must be known before the first screen, widget or notification is drawn.
         I18n.apply(runBlocking { settings.settings.first().language })
         scope.launch {
-            settings.settings.map { it.language }.drop(1).collect { language ->
-                I18n.apply(language)
+            // Language or favourites changed: the widget and the notification channel follow.
+            settings.settings.drop(1).collect { current ->
+                I18n.apply(current.language)
                 ReminderReceiver.ensureChannel(this@ApexLapApplication)
                 NextSessionWidget().updateAll(this@ApexLapApplication)
             }
