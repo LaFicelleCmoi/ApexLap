@@ -1,5 +1,6 @@
 package com.apexlap.ui.live
 
+import com.apexlap.i18n.I18n
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.apexlap.data.openf1.OpenF1Account
@@ -173,7 +174,7 @@ class LiveTimingViewModel @Inject constructor(
                     state.update { it.copy(isLoading = false, error = e.message) }
                     return@launch
                 } catch (e: Exception) {
-                    state.update { it.copy(isLoading = false, error = "Flux interrompu, reconnexion…") }
+                    state.update { it.copy(isLoading = false, error = I18n.strings.streamInterrupted) }
                 }
                 attempt++
                 delay(minOf(30_000L, 2_000L shl minOf(attempt, 4)))
@@ -187,7 +188,7 @@ class LiveTimingViewModel @Inject constructor(
     } catch (e: CancellationException) {
         throw e
     } catch (e: retrofit2.HttpException) {
-        if (e.code() == 401 || e.code() == 400) "Identifiants OpenF1 incorrects" else e.toUserMessage()
+        if (e.code() == 401 || e.code() == 400) I18n.strings.openF1BadCredentials else e.toUserMessage()
     } catch (e: Exception) {
         e.toUserMessage()
     }
