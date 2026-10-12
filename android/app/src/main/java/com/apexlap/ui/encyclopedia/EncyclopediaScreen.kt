@@ -1,5 +1,7 @@
 package com.apexlap.ui.encyclopedia
 
+import com.apexlap.i18n.Strings
+import com.apexlap.i18n.LocalStrings
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -66,20 +68,21 @@ fun EncyclopediaScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var tab by rememberSaveable { mutableStateOf(EncyclopediaTab.SEASONS) }
+    val strings = LocalStrings.current
     LaunchedEffect(tab) { viewModel.onTabShown(tab) }
 
-    DetailScaffold(title = "Encyclopédie", onBack = onBack) { padding ->
+    DetailScaffold(title = strings.encyclopedia, onBack = onBack) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
             PrimaryScrollableTabRow(selectedTabIndex = tab.ordinal, containerColor = MaterialTheme.colorScheme.background, edgePadding = 8.dp) {
                 EncyclopediaTab.entries.forEach {
-                    Tab(selected = tab == it, onClick = { tab = it }, text = { Text(it.label) })
+                    Tab(selected = tab == it, onClick = { tab = it }, text = { Text(it.label(strings)) })
                 }
             }
             if (tab != EncyclopediaTab.SEASONS) {
                 OutlinedTextField(
                     value = state.query,
                     onValueChange = viewModel::onQueryChange,
-                    placeholder = { Text(placeholder(tab)) },
+                    placeholder = { Text(placeholder(tab, strings)) },
                     leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
                     singleLine = true,
                     shape = RoundedCornerShape(14.dp),
@@ -91,24 +94,24 @@ fun EncyclopediaScreen(
                 FilterChip(
                     selected = state.championsOnly,
                     onClick = { viewModel.onChampionsOnlyChange(!state.championsOnly) },
-                    label = { Text("🏆 Champions du monde") },
+                    label = { Text(strings.worldChampionsFilter) },
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
             }
             when (tab) {
                 EncyclopediaTab.SEASONS -> Seasons(state, onSeasonClick)
-                EncyclopediaTab.DRIVERS -> RemoteList(state.drivers, "Aucun pilote trouvé", { viewModel.refresh(tab) }) { drivers ->
+                EncyclopediaTab.DRIVERS -> RemoteList(state.drivers, strings.noDriverFound, { viewModel.refresh(tab) }) { drivers ->
                     items(drivers, key = { it.id }) { driver ->
                         val titles = state.registry?.driverTitles(driver.id)?.count ?: 0
                         EntryRow(
                             title = "${flagOf(driver.nationality)}  ${driver.fullName}",
-                            subtitle = listOfNotNull(driver.nationality, driver.dateOfBirth?.year?.let { "né en $it" }).joinToString(" · "),
+                            subtitle = listOfNotNull(driver.nationality, driver.dateOfBirth?.year?.let { strings.bornIn(it) }).joinToString(" · "),
                             badge = titles.takeIf { it > 0 }?.let { "🏆 ×$it" },
                             onClick = { onDriverClick(driver.id) },
                         )
                     }
                 }
-                EncyclopediaTab.CONSTRUCTORS -> RemoteList(state.constructors, "Aucune écurie trouvée", { viewModel.refresh(tab) }) { teams ->
+                EncyclopediaTab.CONSTRUCTORS -> RemoteList(state.constructors, strings.noTeamFound, { viewModel.refresh(tab) }) { teams ->
                     items(teams, key = { it.id }) { team ->
                         val titles = state.registry?.constructorTitles(team.id)?.count ?: 0
                         EntryRow(
@@ -120,7 +123,7 @@ fun EncyclopediaScreen(
                         )
                     }
                 }
-                EncyclopediaTab.CIRCUITS -> RemoteList(state.circuits, "Aucun circuit trouvé", { viewModel.refresh(tab) }) { circuits ->
+                EncyclopediaTab.CIRCUITS -> RemoteList(state.circuits, strings.noCircuitFound, { viewModel.refresh(tab) }) { circuits ->
                     items(circuits, key = { it.id }) { circuit ->
                         EntryRow(
                             title = "${flagOf(circuit.country)}  ${circuit.name}",
@@ -135,22 +138,23 @@ fun EncyclopediaScreen(
     }
 }
 
-private fun placeholder(tab: EncyclopediaTab) = when (tab) {
-    EncyclopediaTab.DRIVERS -> "Rechercher un pilote, une nationalité…"
-    EncyclopediaTab.CONSTRUCTORS -> "Rechercher une écurie…"
-    EncyclopediaTab.CIRCUITS -> "Rechercher un circuit, une ville, un pays…"
-    else -> "Rechercher un terme…"
+private fun placeholder(tab: EncyclopediaTab, strings: Strings) = when (tab) {
+    EncyclopediaTab.DRIVERS -> strings.searchDriver
+    EncyclopediaTab.CONSTRUCTORS -> strings.searchTeam
+    EncyclopediaTab.CIRCUITS -> strings.searchCircuit
+    else -> strings.searchTerm
 }
 
 @Composable
 private fun Seasons(state: EncyclopediaUiState, onSeasonClick: (Int) -> Unit) {
+    val strings = LocalStrings.current
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
         if (state.champions.none { it.season == state.currentSeason }) {
             item {
                 val leader = state.currentLeader
                 SeasonRow(
                     season = state.currentSeason,
-                    driverLine = leader?.let { "En tête : ${it.driver.fullName} · ${it.points.formatPoints()} pts" } ?: "Saison en cours",
+                    driverLine = leader?.let { strings.leaderLine(it.driver.fullName, it.points.formatPoints()) } ?: strings.seasonInProgress,
                     teamLine = leader?.constructor?.name,
                     teamId = leader?.constructor?.id,
                     ongoing = true,
@@ -163,7 +167,7 @@ private fun Seasons(state: EncyclopediaUiState, onSeasonClick: (Int) -> Unit) {
                 season = champion.season,
                 driverLine = "${flagOf(champion.driver.nationality)}  ${champion.driver.name}" +
                     (champion.driver.team?.let { " · $it" } ?: ""),
-                teamLine = champion.constructor?.let { "Constructeurs : ${it.name}" },
+                teamLine = champion.constructor?.let { strings.constructorsChampion(it.name) },
                 teamId = champion.driver.teamId,
                 ongoing = false,
                 onClick = { onSeasonClick(champion.season) },
@@ -191,7 +195,7 @@ private fun SeasonRow(season: Int, driverLine: String, teamLine: String?, teamId
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
             }
         }
-        Text(if (ongoing) "EN COURS" else "›", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(if (ongoing) LocalStrings.current.inProgress else "›", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -203,6 +207,7 @@ private fun <T> RemoteList(
     onRefresh: () -> Unit,
     content: LazyListScope.(List<T>) -> Unit,
 ) {
+    val strings = LocalStrings.current
     val data = state.data
     Column {
         state.error?.let { OfflineBanner(it, onRetry = onRefresh) }
@@ -213,7 +218,7 @@ private fun <T> RemoteList(
                 else -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 8.dp)) {
                     item {
                         Text(
-                            "${data.size} résultat" + if (data.size > 1) "s" else "",
+                            strings.results(data.size),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
@@ -250,16 +255,17 @@ private fun EntryRow(
 
 @Composable
 private fun GlossaryList(terms: List<GlossaryTerm>) {
+    val strings = LocalStrings.current
     if (terms.isEmpty()) {
-        EmptyState("Aucun terme trouvé")
+        EmptyState(LocalStrings.current.noTermFound)
         return
     }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
         GlossaryCategory.entries.forEach { category ->
             val inCategory = terms.filter { it.category == category }
             if (inCategory.isNotEmpty()) {
-                item(key = category.name) { SectionHeader(category.label) }
-                items(inCategory, key = { it.term }) { GlossaryCard(it) }
+                item(key = category.name) { SectionHeader(strings.glossaryCategory(category)) }
+                items(inCategory, key = { it.term.fr }) { GlossaryCard(it) }
             }
         }
     }
@@ -267,6 +273,7 @@ private fun GlossaryList(terms: List<GlossaryTerm>) {
 
 @Composable
 private fun GlossaryCard(term: GlossaryTerm) {
+    val strings = LocalStrings.current
     var expanded by remember { mutableStateOf(false) }
     Surface(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).clickable { expanded = !expanded },
@@ -275,12 +282,12 @@ private fun GlossaryCard(term: GlossaryTerm) {
     ) {
         Column(Modifier.padding(14.dp).animateContentSize()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(term.term, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                Text(term.term[strings.language], style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
                 Text(if (expanded) "−" else "+", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if (expanded) {
                 Text(
-                    term.definition,
+                    term.definition[strings.language],
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 6.dp),
