@@ -7,7 +7,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import com.apexlap.i18n.I18n
+import com.apexlap.i18n.LocalStrings
 import com.apexlap.ui.navigation.ApexLapApp
 import com.apexlap.ui.navigation.RaceRoute
 import com.apexlap.ui.theme.ApexLapTheme
@@ -27,8 +32,12 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         if (savedInstanceState == null) pendingRace.value = intent.raceRoute()
         setContent {
-            ApexLapTheme {
-                ApexLapApp(pendingRace = pendingRace.value, onPendingRaceOpened = { pendingRace.value = null })
+            // Changing the language swaps the provided strings: the whole UI redraws in place, no restart.
+            val language by I18n.language.collectAsState()
+            CompositionLocalProvider(LocalStrings provides I18n.stringsOf(language)) {
+                ApexLapTheme {
+                    ApexLapApp(pendingRace = pendingRace.value, onPendingRaceOpened = { pendingRace.value = null })
+                }
             }
         }
     }
