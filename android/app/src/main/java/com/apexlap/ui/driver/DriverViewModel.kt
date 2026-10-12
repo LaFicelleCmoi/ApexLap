@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.apexlap.data.encyclopedia.EncyclopediaRepository
 import com.apexlap.domain.encyclopedia.Titles
+import com.apexlap.domain.encyclopedia.driverBio
 import com.apexlap.domain.model.DriverProfile
 import com.apexlap.domain.model.DriverStanding
 import com.apexlap.domain.repository.F1Repository
@@ -30,6 +31,7 @@ data class DriverUiState(
     val titles: Titles = Titles.NONE,
     val isRefreshing: Boolean = false,
     val error: String? = null,
+    val bio: String? = null,
 )
 
 @HiltViewModel
@@ -55,7 +57,11 @@ class DriverViewModel @Inject constructor(
     private val titles = flow { emit(encyclopedia.champions().driverTitles(driverId)) }
 
     val uiState: StateFlow<DriverUiState> = combine(profile.state, standing, titles) { profile, standing, titles ->
-        DriverUiState(season, profile.data, standing, titles, profile.isRefreshing, profile.error)
+        val today = clock.now().atZone(java.time.ZoneOffset.UTC).toLocalDate()
+        DriverUiState(
+            season, profile.data, standing, titles, profile.isRefreshing, profile.error,
+            bio = profile.data?.let { driverBio(it, titles, standing, season, today) },
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DriverUiState(season, isRefreshing = true))
 
     init {
