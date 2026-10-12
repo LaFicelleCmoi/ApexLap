@@ -1,5 +1,6 @@
 package com.apexlap.ui.components
 
+import com.apexlap.i18n.I18n
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -60,7 +61,7 @@ class OfflineFirstLoader<T>(
 }
 
 fun Throwable.toUserMessage(): String = when (this) {
-    is IOException -> "Hors ligne — affichage des données en cache"
-    is HttpException -> "Serveur indisponible (HTTP ${code()})"
-    else -> "Impossible de charger les données"
+    is IOException -> I18n.strings.offlineCached
+    is HttpException -> I18n.strings.serverDown(code())
+    else -> I18n.strings.loadFailed
 }
