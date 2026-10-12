@@ -35,7 +35,9 @@ import com.apexlap.ui.components.toUserMessage
 import com.apexlap.ui.navigation.CircuitRoute
 import com.apexlap.ui.theme.ApexColors
 import com.apexlap.ui.theme.TeamColors
+import com.apexlap.domain.encyclopedia.CircuitGuides
 import com.apexlap.domain.encyclopedia.CircuitHistory
+import com.apexlap.domain.encyclopedia.CircuitRecords
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,7 +46,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class CircuitUiState(val history: CircuitHistory? = null, val isLoading: Boolean = true, val error: String? = null)
+data class CircuitUiState(
+    val history: CircuitHistory? = null,
+    /** Loaded after the history; missing records never block the page. */
+    val records: CircuitRecords? = null,
+    val isLoading: Boolean = true,
+    val error: String? = null,
+)
 
 @HiltViewModel
 class CircuitViewModel @Inject constructor(
@@ -68,6 +76,14 @@ class CircuitViewModel @Inject constructor(
                 throw e
             } catch (e: Exception) {
                 state.value.copy(isLoading = false, error = e.toUserMessage())
+            }
+            try {
+                val records = encyclopedia.circuitRecords(circuitId)
+                state.value = state.value.copy(records = records)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Records are a bonus: the history is still shown without them.
             }
         }
     }
@@ -100,6 +116,51 @@ fun CircuitScreen(
                         StatTile("Grands Prix", history.grandsPrix.toString(), MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
                         StatTile("Premier", history.firstSeason?.toString() ?: "—", MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
                         StatTile("Dernier", history.lastSeason?.toString() ?: "—", MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
+                    }
+                }
+                CircuitGuides.of(history.circuit.id)?.let { guide ->
+                    item {
+                        Text(guide.summary, style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+                    }
+                    item { SectionHeader("Virages clés") }
+                    items(guide.corners, key = { "corner-${it.name}" }) { corner ->
+                        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
+                            Text(corner.name, style = MaterialTheme.typography.titleSmall)
+                            Text(corner.description, style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+                state.records?.takeIf { it.raceLap != null || it.poleSitters.isNotEmpty() }?.let { records ->
+                    item { SectionHeader("Records") }
+                    records.raceLap?.let { lap ->
+                        item {
+                            RecordRow(
+                                label = "Record du tour en course",
+                                value = lap.time,
+                                detail = "${lap.driver.fullName} · ${lap.constructor.name} · ${lap.season}",
+                                onClick = { onDriverClick(lap.driver.id) },
+                            )
+                        }
+                    }
+                    records.poleSitters.firstOrNull()?.let { (driver, poles) ->
+                        item {
+                            RecordRow(
+                                label = "Le plus de départs en pole",
+                                value = poles.toString(),
+                                detail = records.poleSitters.joinToString("  ·  ") { (d, n) -> "${d.familyName} $n" },
+                                onClick = { onDriverClick(driver.id) },
+                            )
+                        }
+                    }
+                    item {
+                        Text(
+                            "Temps au tour connus depuis 2004, toutes configurations du circuit confondues.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        )
                     }
                 }
                 if (history.wins.isEmpty()) {
@@ -142,5 +203,19 @@ fun CircuitScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun RecordRow(label: String, value: String, detail: String, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(label.uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(detail, style = MaterialTheme.typography.bodySmall)
+        }
+        Text(value, style = MaterialTheme.typography.titleMedium, color = ApexColors.PurpleSector)
     }
 }
