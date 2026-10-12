@@ -381,6 +381,16 @@ class Strings(val language: AppLanguage) {
         "Mantén pulsada la pantalla de inicio → Widgets → Apex Lap.",
     )
     val nextSession = t("PROCHAINE SÉANCE", "NEXT SESSION", "PRÓXIMA SESIÓN")
+    val liveNow = t("EN DIRECT", "LIVE", "EN DIRECTO")
+    val startsInLabel = t("DÉPART DANS", "STARTS IN", "EMPIEZA EN")
+    val weekendSchedule = t("PROGRAMME", "SCHEDULE", "HORARIO")
+    fun pointsBehind(points: String) = t("à $points pts du leader", "$points pts behind the leader", "a $points pts del líder")
+    /** "2 j 4 h", "3 h 05", "45 min": a countdown without the "in". */
+    fun compactDuration(minutes: Long): String = when {
+        minutes < 60 -> "$minutes min"
+        minutes < 24 * 60 -> "${minutes / 60} h" + (minutes % 60).let { if (it > 0) " ${it.toString().padStart(2, '0')}" else "" }
+        else -> (minutes / (24 * 60)).let { d -> t("$d j", "$d d", "$d d") } + ((minutes / 60) % 24).let { if (it > 0) " $it h" else "" }
+    }
     val seasonOver = t("Saison terminée", "Season over", "Temporada terminada")
     val openAppToLoad = t("Ouvrez Apex Lap pour charger le calendrier", "Open Apex Lap to load the calendar", "Abre Apex Lap para cargar el calendario")
     fun startsIn(relative: String, time: String) = t("Départ $relative ($time)", "Starts $relative ($time)", "Empieza $relative ($time)")
