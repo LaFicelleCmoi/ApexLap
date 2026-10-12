@@ -1,5 +1,6 @@
 package com.apexlap.ui.telemetry
 
+import com.apexlap.i18n.I18n
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -105,7 +106,7 @@ class LapComparisonViewModel @Inject constructor(
         val traceA = repository.trace(session.key, a)
         val traceB = repository.trace(session.key, b)
         if (traceA == null || traceB == null) {
-            state.update { it.copy(comparison = null, error = "Télémétrie indisponible pour ce tour") }
+            state.update { it.copy(comparison = null, error = I18n.strings.telemetryUnavailable) }
             return
         }
         val comparison = compareLaps(traceA, traceB)
