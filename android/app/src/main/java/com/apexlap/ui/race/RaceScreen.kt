@@ -32,6 +32,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.apexlap.domain.encyclopedia.GrandPrixContext
+import com.apexlap.domain.encyclopedia.GrandPrixFacts
 import com.apexlap.domain.model.QualifyingResult
 import com.apexlap.domain.model.RaceResult
 import com.apexlap.domain.model.Session
@@ -52,7 +54,12 @@ private enum class WeekendTab(val label: String) { RACE("COURSE"), QUALIFYING("Q
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RaceScreen(onBack: () -> Unit, onDriverClick: (String) -> Unit, viewModel: RaceViewModel = hiltViewModel()) {
+fun RaceScreen(
+    onBack: () -> Unit,
+    onDriverClick: (String) -> Unit,
+    onCircuitClick: (String) -> Unit,
+    viewModel: RaceViewModel = hiltViewModel(),
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val race = state.race
     val tabs = if (race?.isSprintWeekend == true) WeekendTab.entries else listOf(WeekendTab.RACE, WeekendTab.QUALIFYING)
@@ -82,6 +89,12 @@ fun RaceScreen(onBack: () -> Unit, onDriverClick: (String) -> Unit, viewModel: R
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
+                    val facts = state.facts
+                    if (!facts.isEmpty) {
+                        item { FactsCard(facts, onDriverClick) }
+                    }
+                    item { SectionHeader("Contexte") }
+                    item { ContextBlock(state.context, onDriverClick) { onCircuitClick(race.circuit.id) } }
                     item { SectionHeader("Programme (heure locale)") }
                     items(race.sessions, key = { it.type }) { SessionRow(it) }
                 }
@@ -235,5 +248,65 @@ private fun QualifyingRow(result: QualifyingResult, onClick: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+@Composable
+private fun FactsCard(facts: GrandPrixFacts, onDriverClick: (String) -> Unit) {
+    Surface(Modifier.fillMaxWidth().padding(16.dp), shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
+        Column(Modifier.padding(vertical = 8.dp)) {
+            facts.winner?.let { FactRow("🏆 Vainqueur", it.driver.fullName, it.constructor.name, ApexColors.Gold) { onDriverClick(it.driver.id) } }
+            facts.pole?.let { FactRow("Pole position", it.fullName, facts.poleTime.orEmpty(), ApexColors.PurpleSector) { onDriverClick(it.id) } }
+            facts.fastestLap?.let {
+                FactRow("⏱ Meilleur tour", it.driver.fullName, it.fastestLapTime.orEmpty(), ApexColors.PurpleSector) { onDriverClick(it.driver.id) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FactRow(label: String, name: String, detail: String, accent: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(label.uppercase(), style = MaterialTheme.typography.labelSmall, color = accent, modifier = Modifier.width(120.dp))
+        Text(name, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+        Text(detail, style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun ContextBlock(context: GrandPrixContext?, onDriverClick: (String) -> Unit, onCircuitClick: () -> Unit) {
+    Column(Modifier.padding(horizontal = 16.dp)) {
+        context?.let {
+            Text(
+                if (it.edition == 1) "Premier Grand Prix disputé sur ce circuit." else "${it.edition}e Grand Prix disputé sur ce circuit.",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            it.previousWinner?.let { win ->
+                Text(
+                    "Vainqueur précédent : ${win.driver.fullName} (${win.constructor.name}, ${win.season})",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.clickable { onDriverClick(win.driver.id) },
+                )
+            }
+            it.mostWins?.let { (driver, wins) ->
+                Text(
+                    "Recordman des victoires ici : ${driver.fullName} ($wins)",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.clickable { onDriverClick(driver.id) },
+                )
+            }
+        }
+        Text(
+            "Fiche du circuit ›",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.clickable(onClick = onCircuitClick).padding(vertical = 8.dp),
+        )
     }
 }
