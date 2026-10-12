@@ -49,7 +49,7 @@ fun SettingsScreen(onBack: () -> Unit, onRemindersClick: () -> Unit, viewModel: 
 
     DetailScaffold(title = strings.settings, onBack = onBack) { padding ->
         Column(Modifier.padding(padding).verticalScroll(rememberScrollState())) {
-            SectionHeader(strings.language)
+            SectionHeader(strings.languageLabel)
             Card {
                 LanguagePreference.entries.forEach { option ->
                     Row(
