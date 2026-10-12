@@ -48,7 +48,7 @@ import com.apexlap.ui.components.OfflineBanner
 import com.apexlap.ui.components.SectionHeader
 import com.apexlap.ui.components.formatLapTime
 import com.apexlap.ui.components.localDay
-import com.apexlap.ui.live.frenchSessionName
+import com.apexlap.i18n.LocalStrings
 import com.apexlap.ui.stats.ChartLegend
 import com.apexlap.ui.stats.ChartSeries
 import com.apexlap.ui.theme.ChartPalette
@@ -62,15 +62,16 @@ fun LapComparisonScreen(onBack: () -> Unit, viewModel: LapComparisonViewModel = 
     val colors = listOf(ChartPalette[0], ChartPalette[1])
     val driverA = state.driver(state.lapA?.driver)
     val driverB = state.driver(state.lapB?.driver)
+    val strings = LocalStrings.current
 
-    DetailScaffold(title = "Comparateur de tours", onBack = onBack) { padding ->
+    DetailScaffold(title = strings.lapComparison, onBack = onBack) { padding ->
         Column(Modifier.padding(padding).verticalScroll(rememberScrollState())) {
             if (state.isLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
             state.error?.let { OfflineBanner(it, onRetry = viewModel::retry) }
 
             Picker(
-                label = state.session?.let { "${it.circuit} · ${frenchSessionName(it.name)} — ${it.start.localDay()}" } ?: "Séance",
-                options = state.sessions.take(40).map { it.key to "${it.circuit} · ${frenchSessionName(it.name)} — ${it.start.localDay()}" },
+                label = state.session?.let { "${it.circuit} · ${strings.openF1Session(it.name)} — ${it.start.localDay()}" } ?: strings.sessionLabel,
+                options = state.sessions.take(40).map { it.key to "${it.circuit} · ${strings.openF1Session(it.name)} — ${it.start.localDay()}" },
                 onSelect = { viewModel.selectSession(it); selected = null },
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
@@ -80,25 +81,25 @@ fun LapComparisonScreen(onBack: () -> Unit, viewModel: LapComparisonViewModel = 
             }
 
             if (comparison == null) {
-                if (!state.isLoading && state.sessions.isEmpty()) EmptyState(state.error ?: "Aucune séance disponible", onRetry = viewModel::retry)
+                if (!state.isLoading && state.sessions.isEmpty()) EmptyState(state.error ?: strings.noSessionAvailable, onRetry = viewModel::retry)
                 return@Column
             }
             val codeA = driverA?.acronym ?: "A"
             val codeB = driverB?.acronym ?: "B"
 
-            SectionHeader("Temps au tour")
+            SectionHeader(strings.lapTimes)
             SectorTable(state.lapA, state.lapB, codeA, codeB, colors)
 
-            SectionHeader("Lecture")
+            SectionHeader(strings.readout)
             Readout(comparison, selected, codeA, codeB, colors)
 
-            ChartCard("Vitesse (km/h)") {
+            ChartCard(strings.speedChart) {
                 TraceChart(
                     comparison.distance,
                     listOf(ChartSeries(codeA, colors[0], comparison.speedA), ChartSeries(codeB, colors[1], comparison.speedB)),
                     selected, { selected = it },
                     yMin = 50.0, yMax = 360.0, yTicks = listOf(100.0, 200.0, 300.0), yLabel = { "${it.toInt()}" },
-                    description = "Vitesse de $codeA et $codeB sur le tour",
+                    description = strings.speedDescription(codeA, codeB),
                     height = 170.dp,
                 )
                 Spacer(Modifier.height(6.dp))
@@ -107,7 +108,7 @@ fun LapComparisonScreen(onBack: () -> Unit, viewModel: LapComparisonViewModel = 
                     showValues = false,
                 )
             }
-            ChartCard("Écart cumulé (s) — au-dessus de 0 : $codeA devant") {
+            ChartCard(strings.deltaChart(codeA)) {
                 val maxDelta = maxOf(0.2, comparison.delta.maxOf { kotlin.math.abs(it) })
                 val bound = kotlin.math.ceil(maxDelta * 10) / 10
                 TraceChart(
@@ -116,32 +117,32 @@ fun LapComparisonScreen(onBack: () -> Unit, viewModel: LapComparisonViewModel = 
                     selected, { selected = it },
                     yMin = -bound, yMax = bound, yTicks = listOf(-bound, 0.0, bound),
                     yLabel = { String.format(Locale.US, "%+.1f", it) },
-                    description = "Écart de temps cumulé entre $codeA et $codeB",
+                    description = strings.deltaDescription(codeA, codeB),
                     zeroLine = true,
                 )
             }
-            ChartCard("Accélérateur (%)") {
+            ChartCard(strings.throttleChart) {
                 TraceChart(
                     comparison.distance,
                     listOf(ChartSeries(codeA, colors[0], comparison.throttleA), ChartSeries(codeB, colors[1], comparison.throttleB)),
                     selected, { selected = it },
                     yMin = 0.0, yMax = 100.0, yTicks = listOf(0.0, 50.0, 100.0), yLabel = { "${it.toInt()}" },
-                    description = "Pression sur l'accélérateur",
+                    description = strings.throttleDescription,
                     height = 110.dp,
                 )
             }
-            ChartCard("Freinage") {
+            ChartCard(strings.brakeChart) {
                 TraceChart(
                     comparison.distance,
                     listOf(ChartSeries(codeA, colors[0], comparison.brakeA), ChartSeries(codeB, colors[1], comparison.brakeB.map { it * 0.85 })),
                     selected, { selected = it },
                     yMin = 0.0, yMax = 100.0, yTicks = listOf(0.0, 100.0), yLabel = { if (it > 0) "ON" else "OFF" },
-                    description = "Phases de freinage",
+                    description = strings.brakeDescription,
                     height = 80.dp,
                 )
             }
 
-            SectionHeader("Domination par mini-secteur")
+            SectionHeader(strings.miniSectors)
             ChartCard(null) {
                 DominanceMap(
                     state.track, comparison.miniSectorWinners, colors,
@@ -150,15 +151,14 @@ fun LapComparisonScreen(onBack: () -> Unit, viewModel: LapComparisonViewModel = 
                 val winsA = comparison.miniSectorWinners.count { it == 0 }
                 ChartLegend(
                     listOf(
-                        ChartSeries("$codeA · $winsA mini-secteurs", colors[0], listOf()),
-                        ChartSeries("$codeB · ${comparison.miniSectorWinners.size - winsA} mini-secteurs", colors[1], listOf()),
+                        ChartSeries(strings.miniSectorsWon(codeA, winsA), colors[0], listOf()),
+                        ChartSeries(strings.miniSectorsWon(codeB, comparison.miniSectorWinners.size - winsA), colors[1], listOf()),
                     ),
                     showValues = false,
                 )
             }
             Text(
-                "Distance intégrée depuis la vitesse (OpenF1 ne fournit pas de canal distance) : les positions sont " +
-                    "précises à quelques mètres près. Freinage de $codeB légèrement décalé pour rester lisible.",
+                strings.telemetryNote(codeB),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(16.dp),
@@ -186,9 +186,10 @@ private fun ChartCard(title: String?, content: @Composable () -> Unit) {
 
 @Composable
 private fun Readout(comparison: LapComparison, selected: Int?, codeA: String, codeB: String, colors: List<Color>) {
+    val strings = LocalStrings.current
     val i = selected ?: run {
         Text(
-            "Touchez ou glissez sur un graphique pour lire les valeurs à un point du tour.",
+            strings.chartTouchHint,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 16.dp),
@@ -222,7 +223,8 @@ private fun ReadoutValue(code: String, value: String, color: Color) {
 @Composable
 private fun SectorTable(a: LapRef?, b: LapRef?, codeA: String, codeB: String, colors: List<Color>) {
     if (a == null || b == null) return
-    val columns = listOf("S1", "S2", "S3", "TOUR")
+    val strings = LocalStrings.current
+    val columns = listOf("S1", "S2", "S3", strings.lapColumn)
     val valuesA = a.sectors + a.duration
     val valuesB = b.sectors + b.duration
     Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -232,7 +234,7 @@ private fun SectorTable(a: LapRef?, b: LapRef?, codeA: String, codeB: String, co
                 Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
             }
         }
-        listOf(Triple(codeA + " T${a.lapNumber}", valuesA, valuesB), Triple(codeB + " T${b.lapNumber}", valuesB, valuesA)).forEachIndexed { row, (label, mine, other) ->
+        listOf(Triple(codeA + " " + strings.lapShort(a.lapNumber), valuesA, valuesB), Triple(codeB + " " + strings.lapShort(b.lapNumber), valuesB, valuesA)).forEachIndexed { row, (label, mine, other) ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Row(Modifier.width(64.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.width(4.dp).height(16.dp).background(colors[row], RoundedCornerShape(2.dp)))
@@ -266,9 +268,10 @@ private fun LapSelector(
     viewModel: LapComparisonViewModel,
     modifier: Modifier = Modifier,
 ) {
+    val strings = LocalStrings.current
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Picker(
-            label = driver?.let { "${it.acronym} · ${it.team}" } ?: "Pilote",
+            label = driver?.let { "${it.acronym} · ${it.team}" } ?: strings.driver,
             options = drivers.map { it.number to "${it.acronym} — ${it.fullName}" },
             onSelect = { viewModel.selectDriver(slot, it) },
             accent = color,
@@ -276,9 +279,9 @@ private fun LapSelector(
         val driverLaps = driver?.let { laps[it.number] }.orEmpty()
         val best = driverLaps.minByOrNull { it.duration }
         Picker(
-            label = lap?.let { "T${it.lapNumber} · ${formatLapTime(it.duration)}" + if (it == best) " ★" else "" } ?: "Tour",
+            label = lap?.let { strings.lapShort(it.lapNumber) + " · ${formatLapTime(it.duration)}" + if (it == best) " ★" else "" } ?: strings.lapLabel,
             options = driverLaps.sortedBy { it.duration }.take(30).map {
-                it.lapNumber to "Tour ${it.lapNumber} · ${formatLapTime(it.duration)}" + if (it == best) " (meilleur)" else ""
+                it.lapNumber to strings.lapOption(it.lapNumber, formatLapTime(it.duration), it == best)
             },
             onSelect = { number -> driverLaps.firstOrNull { it.lapNumber == number }?.let { viewModel.selectLap(slot, it) } },
             accent = color,
