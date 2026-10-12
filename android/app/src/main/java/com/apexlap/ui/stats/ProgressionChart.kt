@@ -1,5 +1,7 @@
 package com.apexlap.ui.stats
 
+import com.apexlap.i18n.LocalStrings
+import com.apexlap.i18n.Strings
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -74,6 +76,7 @@ fun ProgressionChart(
     val axisStyle = MaterialTheme.typography.labelSmall.copy(color = ApexColors.Telemetry)
     val labelStyle = MaterialTheme.typography.labelMedium.copy(color = MaterialTheme.colorScheme.onSurface)
     val leader = series.maxBy { it.values.last() }
+    val strings = LocalStrings.current
 
     fun indexAt(x: Float, width: Float, density: Float): Int {
         val start = PlotStart.value * density
@@ -98,8 +101,7 @@ fun ProgressionChart(
                 }
             }
             .semantics {
-                contentDescription = "Évolution des points sur ${rounds.size} manches. " +
-                    "En tête : ${leader.label} avec ${leader.values.last().formatPoints()} points."
+                contentDescription = strings.chartDescription(rounds.size, leader.label, leader.values.last().formatPoints())
             },
     ) {
         val left = PlotStart.toPx()
@@ -121,7 +123,7 @@ fun ProgressionChart(
         val labelEvery = ceil(rounds.size / 8.0).toInt().coerceAtLeast(1)
         rounds.forEachIndexed { i, round ->
             if (i % labelEvery == 0 || i == rounds.lastIndex) {
-                drawLabel(measurer, "M$round", axisStyle, Offset(x(i), bottom + 12.dp.toPx()), center = true)
+                drawLabel(measurer, strings.roundShort(round), axisStyle, Offset(x(i), bottom + 12.dp.toPx()), center = true)
             }
         }
 
@@ -147,7 +149,7 @@ fun ProgressionChart(
                 drawLabel(measurer, s.label, labelStyle, Offset(right + 8.dp.toPx(), ly - overflow.coerceAtLeast(0f)))
             }
         } else {
-            drawTooltip(measurer, markerIndex, rounds[markerIndex], series, x(markerIndex), left, right, top, labelStyle, axisStyle)
+            drawTooltip(measurer, markerIndex, rounds[markerIndex], series, x(markerIndex), left, right, top, labelStyle, axisStyle, strings)
         }
     }
 }
@@ -211,11 +213,12 @@ private fun DrawScope.drawTooltip(
     top: Float,
     labelStyle: TextStyle,
     titleStyle: TextStyle,
+    strings: Strings,
 ) {
     drawLine(ApexColors.Telemetry.copy(alpha = 0.6f), Offset(cx, top), Offset(cx, size.height - PlotBottom.toPx()), strokeWidth = 1f)
-    val title = measurer.measure("APRÈS LA MANCHE $round", titleStyle)
+    val title = measurer.measure(strings.afterRound(round), titleStyle)
     val rows = series.sortedByDescending { it.values[index] }
-        .map { it to measurer.measure("${it.label}  ${it.values[index].formatPoints()} pts", labelStyle) }
+        .map { it to measurer.measure("${it.label}  ${it.values[index].formatPoints()} ${strings.pts}", labelStyle) }
     val pad = 8.dp.toPx()
     val swatch = 10.dp.toPx()
     val width = maxOf(title.size.width.toFloat(), rows.maxOf { it.second.size.width } + swatch + pad) + pad * 2
