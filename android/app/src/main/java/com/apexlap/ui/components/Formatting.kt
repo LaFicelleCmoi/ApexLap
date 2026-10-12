@@ -1,27 +1,35 @@
 package com.apexlap.ui.components
 
+import com.apexlap.i18n.AppLanguage
+import com.apexlap.i18n.I18n
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private val french = Locale.FRENCH
-private val dayFormatter = DateTimeFormatter.ofPattern("EEE d MMM", french)
-private val shortDayFormatter = DateTimeFormatter.ofPattern("d MMM", french)
-private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm", french)
+// Formatters follow the app language (read at call time, so a language change applies on the next draw).
+private fun formatter(pattern: String) = DateTimeFormatter.ofPattern(pattern, I18n.locale)
+
+private fun dayFormatter() = formatter("EEE d MMM")
+private fun shortDayFormatter() = formatter("d MMM")
+private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.ROOT)
 
 fun Instant.localDay(zone: ZoneId = ZoneId.systemDefault()): String =
-    dayFormatter.format(atZone(zone)).replaceFirstChar { it.uppercase() }
+    dayFormatter().format(atZone(zone)).replaceFirstChar { it.uppercase() }
 
 fun Instant.localTime(zone: ZoneId = ZoneId.systemDefault()): String = timeFormatter.format(atZone(zone))
 
-fun LocalDate.shortDay(): String = shortDayFormatter.format(this)
+fun LocalDate.shortDay(): String = shortDayFormatter().format(this)
 
-fun LocalDate.longDay(): String = dayFormatter.format(this).replaceFirstChar { it.uppercase() }
+fun LocalDate.longDay(): String = dayFormatter().format(this).replaceFirstChar { it.uppercase() }
+
+/** "d MMMM yyyy" in the app language, e.g. for birth dates. */
+fun LocalDate.fullDate(): String =
+    formatter(if (I18n.strings.language == AppLanguage.ES) "d 'de' MMMM 'de' yyyy" else "d MMMM yyyy").format(this)
 
 fun Double.formatPoints(): String =
-    if (this % 1.0 == 0.0) toLong().toString() else String.format(french, "%.1f", this)
+    if (this % 1.0 == 0.0) toLong().toString() else String.format(I18n.locale, "%.1f", this)
 
 /** Converts an ISO country name to its flag emoji for the countries that host or race in F1. */
 fun flagOf(countryOrNationality: String): String {
@@ -44,14 +52,15 @@ private val countryCodes = mapOf(
     "Switzerland" to "CH", "Portugal" to "PT", "Polish" to "PL", "Russian" to "RU", "Swedish" to "SE",
 )
 
-/** "dans 2 j 4 h", "dans 3 h 20", "dans 45 min", "maintenant" — for the widget and reminders. */
+/** "in 2 d 4 h", "in 3 h 20", "in 45 min", "now" — for the widget and reminders, in the app language. */
 fun relativeStart(from: Instant, to: Instant): String {
+    val strings = I18n.strings
     val minutes = java.time.Duration.between(from, to).toMinutes()
     return when {
-        minutes <= 0 -> "maintenant"
-        minutes < 60 -> "dans $minutes min"
-        minutes < 24 * 60 -> "dans ${minutes / 60} h" + (minutes % 60).takeIf { it > 0 }?.let { " ${it.toString().padStart(2, '0')}" }.orEmpty()
-        else -> "dans ${minutes / (24 * 60)} j" + ((minutes / 60) % 24).takeIf { it > 0 }?.let { " $it h" }.orEmpty()
+        minutes <= 0 -> strings.now
+        minutes < 60 -> strings.inMinutes(minutes)
+        minutes < 24 * 60 -> strings.inHours(minutes / 60, minutes % 60)
+        else -> strings.inDays(minutes / (24 * 60), (minutes / 60) % 24)
     }
 }
 
