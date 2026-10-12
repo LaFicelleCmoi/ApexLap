@@ -102,6 +102,16 @@ class FakeJolpicaApi : JolpicaApi {
         return decodeFixture("results_singapore_2026.json")
     }
 
+    override suspend fun circuitFastestLaps(circuitId: String, limit: Int): JolpicaResponse<RaceTableData> {
+        checkOnline()
+        return decodeFixture("results_singapore_2026.json")
+    }
+
+    override suspend fun circuitPoleSitters(circuitId: String, limit: Int): JolpicaResponse<RaceTableData> {
+        checkOnline()
+        return decodeFixture("results_singapore_2026.json")
+    }
+
     override suspend fun seasonWinners(season: Int, limit: Int): JolpicaResponse<RaceTableData> {
         checkOnline()
         return decodeFixture("results_singapore_2026.json")
