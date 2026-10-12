@@ -81,6 +81,14 @@ interface JolpicaApi {
     @GET("circuits/{circuitId}/results/1.json")
     suspend fun circuitWinners(@Path("circuitId") circuitId: String, @Query("limit") limit: Int = PAGE_SIZE): JolpicaResponse<RaceTableData>
 
+    /** Fastest lap of every Grand Prix held at a circuit (lap times are recorded since 2004). */
+    @GET("circuits/{circuitId}/fastest/1/results.json")
+    suspend fun circuitFastestLaps(@Path("circuitId") circuitId: String, @Query("limit") limit: Int = PAGE_SIZE): JolpicaResponse<RaceTableData>
+
+    /** Race result of the pole sitter of every Grand Prix held at a circuit. */
+    @GET("circuits/{circuitId}/grid/1/results.json")
+    suspend fun circuitPoleSitters(@Path("circuitId") circuitId: String, @Query("limit") limit: Int = PAGE_SIZE): JolpicaResponse<RaceTableData>
+
     /** Winner of each Grand Prix of a season. */
     @GET("{season}/results/1.json")
     suspend fun seasonWinners(@Path("season") season: Int, @Query("limit") limit: Int = PAGE_SIZE): JolpicaResponse<RaceTableData>
