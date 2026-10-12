@@ -1,5 +1,7 @@
 package com.apexlap.ui.encyclopedia
 
+import com.apexlap.i18n.Strings
+import com.apexlap.i18n.I18n
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.apexlap.data.encyclopedia.EncyclopediaRepository
@@ -26,8 +28,12 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-enum class EncyclopediaTab(val label: String) {
-    SEASONS("SAISONS"), DRIVERS("PILOTES"), CONSTRUCTORS("ÉCURIES"), CIRCUITS("CIRCUITS"), GLOSSARY("GLOSSAIRE")
+enum class EncyclopediaTab(val label: (Strings) -> String) {
+    SEASONS(Strings::tabSeasons),
+    DRIVERS(Strings::tabDrivers),
+    CONSTRUCTORS(Strings::tabTeams),
+    CIRCUITS(Strings::tabCircuits),
+    GLOSSARY(Strings::tabGlossary),
 }
 
 data class EncyclopediaUiState(
@@ -69,7 +75,8 @@ class EncyclopediaViewModel @Inject constructor(
         lists,
         filters,
         f1Repository.observeDriverStandings(season),
-    ) { (d, c, k), (q, champs, reg), standings ->
+        I18n.language,
+    ) { (d, c, k), (q, champs, reg), standings, language ->
         EncyclopediaUiState(
             query = q,
             championsOnly = champs,
@@ -87,7 +94,7 @@ class EncyclopediaViewModel @Inject constructor(
             circuits = k.copy(data = k.data?.filter {
                 it.name.matchesSearch(q) || it.locality.matchesSearch(q) || it.country.matchesSearch(q)
             }),
-            glossary = Glossary.terms.filter { it.term.matchesSearch(q) || it.definition.matchesSearch(q) },
+            glossary = Glossary.terms.filter { it.matches(q, language) },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), EncyclopediaUiState(currentSeason = season))
 
