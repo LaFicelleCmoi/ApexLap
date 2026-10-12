@@ -7,6 +7,8 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import com.apexlap.domain.model.SessionType
+import com.apexlap.i18n.I18n
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
@@ -33,7 +35,10 @@ class ReminderReceiver : BroadcastReceiver() {
         val startsAt = Instant.ofEpochMilli(intent.getLongExtra(EXTRA_STARTS_AT, 0))
         val season = intent.getIntExtra(EXTRA_SEASON, 0)
         val round = intent.getIntExtra(EXTRA_ROUND, 0)
+        val strings = I18n.strings
+        // Stored as the SessionType name; reminders planned by older versions hold a ready-made label.
         val session = intent.getStringExtra(EXTRA_SESSION).orEmpty()
+            .let { raw -> runCatching { strings.session(SessionType.valueOf(raw)) }.getOrDefault(raw) }
         val race = intent.getStringExtra(EXTRA_RACE).orEmpty()
         val country = intent.getStringExtra(EXTRA_COUNTRY).orEmpty()
 
@@ -45,7 +50,7 @@ class ReminderReceiver : BroadcastReceiver() {
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("${flagOf(country)} $session · $race")
-            .setContentText("Départ ${relativeStart(Instant.now(), startsAt)} (${startsAt.localTime()})")
+            .setContentText(strings.startsIn(relativeStart(Instant.now(), startsAt), startsAt.localTime()))
             .setColor(ContextCompat.getColor(context, R.color.racing_red))
             .setCategory(NotificationCompat.CATEGORY_EVENT)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -71,13 +76,14 @@ class ReminderReceiver : BroadcastReceiver() {
                 .putExtra(EXTRA_STARTS_AT, reminder.session.startsAt?.toEpochMilli() ?: 0L)
                 .putExtra(EXTRA_SEASON, reminder.race.season)
                 .putExtra(EXTRA_ROUND, reminder.race.round)
-                .putExtra(EXTRA_SESSION, reminder.session.type.label)
+                .putExtra(EXTRA_SESSION, reminder.session.type.name)
                 .putExtra(EXTRA_RACE, reminder.race.name)
                 .putExtra(EXTRA_COUNTRY, reminder.race.circuit.country)
 
         fun ensureChannel(context: Context) {
-            val channel = NotificationChannel(CHANNEL_ID, "Rappels de séance", NotificationManager.IMPORTANCE_HIGH)
-                .apply { description = "Prévient quelques minutes avant chaque séance choisie" }
+            val strings = I18n.strings
+            val channel = NotificationChannel(CHANNEL_ID, strings.sessionReminders, NotificationManager.IMPORTANCE_HIGH)
+                .apply { description = strings.reminderChannelDescription }
             context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
     }
