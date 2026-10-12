@@ -1,5 +1,6 @@
 package com.apexlap.ui.telemetry
 
+import com.apexlap.i18n.LocalStrings
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -109,7 +110,8 @@ fun DominanceMap(
     modifier: Modifier = Modifier,
 ) {
     if (points.size < 10 || winners.isEmpty()) return
-    Canvas(modifier.fillMaxWidth().height(220.dp).semantics { contentDescription = "Carte du circuit colorée par pilote le plus rapide par mini-secteur" }) {
+    val trackMapDescription = LocalStrings.current.trackMapDescription
+    Canvas(modifier.fillMaxWidth().height(220.dp).semantics { contentDescription = trackMapDescription }) {
         val minX = points.minOf { it.x }
         val maxX = points.maxOf { it.x }
         val minY = points.minOf { it.y }
