@@ -1,5 +1,6 @@
 package com.apexlap.ui.components
 
+import com.apexlap.i18n.LocalStrings
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -54,7 +55,7 @@ fun EmptyState(message: String, modifier: Modifier = Modifier, onRetry: (() -> U
         Text(message, style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (onRetry != null) {
-            TextButton(onClick = onRetry) { Text("RÉESSAYER") }
+            TextButton(onClick = onRetry) { Text(LocalStrings.current.retry) }
         }
     }
 }
@@ -71,7 +72,7 @@ fun OfflineBanner(message: String, onRetry: () -> Unit, modifier: Modifier = Mod
             Icon(Icons.Outlined.CloudOff, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(18.dp))
             Text(message, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f).padding(horizontal = 8.dp))
-            TextButton(onClick = onRetry) { Text("RÉESSAYER", style = MaterialTheme.typography.labelSmall) }
+            TextButton(onClick = onRetry) { Text(LocalStrings.current.retry, style = MaterialTheme.typography.labelSmall) }
         }
     }
 }
@@ -153,7 +154,7 @@ fun Helmet(color: Color, modifier: Modifier = Modifier, size: Dp = 96.dp) {
 @Composable
 fun TitlesRow(titles: com.apexlap.domain.encyclopedia.Titles, modifier: Modifier = Modifier) {
     Row(modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-        StatTile("Titre" + if (titles.count > 1) "s" else "", "🏆 ${titles.count}", ApexColors.Gold, Modifier.width(120.dp))
+        StatTile(LocalStrings.current.titles(titles.count), "🏆 ${titles.count}", ApexColors.Gold, Modifier.width(120.dp))
         Text(
             titles.seasons.sortedDescending().joinToString(" · "),
             style = MaterialTheme.typography.bodyMedium,
