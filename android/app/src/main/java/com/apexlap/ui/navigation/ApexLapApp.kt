@@ -26,6 +26,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.apexlap.i18n.LocalStrings
+import com.apexlap.i18n.Strings
 import com.apexlap.ui.calendar.CalendarScreen
 import com.apexlap.ui.constructor.ConstructorScreen
 import com.apexlap.ui.driver.DriverScreen
@@ -36,6 +38,7 @@ import com.apexlap.ui.live.LiveTimingScreen
 import com.apexlap.ui.race.RaceScreen
 import com.apexlap.ui.reminders.RemindersScreen
 import com.apexlap.ui.results.ResultsScreen
+import com.apexlap.ui.settings.SettingsScreen
 import com.apexlap.ui.standings.StandingsScreen
 import com.apexlap.ui.stats.StatsScreen
 import com.apexlap.ui.telemetry.LapComparisonScreen
@@ -54,18 +57,19 @@ import kotlin.reflect.KClass
 @Serializable data object EncyclopediaRoute
 @Serializable data class SeasonRoute(val season: Int)
 @Serializable data class CircuitRoute(val circuitId: String)
+@Serializable data object SettingsRoute
 
 /** [sessionKey] is an OpenF1 session, or -1 to let the screen pick the latest qualifying. */
 @Serializable data class TelemetryRoute(val sessionKey: Int = -1)
 
-private data class TopLevel(val route: Any, val routeClass: KClass<*>, val label: String, val icon: ImageVector)
+private data class TopLevel(val route: Any, val routeClass: KClass<*>, val label: (Strings) -> String, val icon: ImageVector)
 
 private val topLevels = listOf(
-    TopLevel(CalendarRoute, CalendarRoute::class, "Calendrier", Icons.Outlined.Flag),
-    TopLevel(ResultsRoute, ResultsRoute::class, "Résultats", Icons.Outlined.FormatListNumbered),
-    TopLevel(LiveRoute, LiveRoute::class, "Live", Icons.Outlined.Sensors),
-    TopLevel(StandingsRoute, StandingsRoute::class, "Classements", Icons.Outlined.EmojiEvents),
-    TopLevel(StatsRoute, StatsRoute::class, "Stats", Icons.Outlined.Insights),
+    TopLevel(CalendarRoute, CalendarRoute::class, Strings::navCalendar, Icons.Outlined.Flag),
+    TopLevel(ResultsRoute, ResultsRoute::class, Strings::navResults, Icons.Outlined.FormatListNumbered),
+    TopLevel(LiveRoute, LiveRoute::class, Strings::navLive, Icons.Outlined.Sensors),
+    TopLevel(StandingsRoute, StandingsRoute::class, Strings::navStandings, Icons.Outlined.EmojiEvents),
+    TopLevel(StatsRoute, StatsRoute::class, Strings::navStats, Icons.Outlined.Insights),
 )
 
 @Composable
@@ -79,6 +83,7 @@ fun ApexLapApp(pendingRace: RaceRoute? = null, onPendingRaceOpened: () -> Unit =
     }
     val backStack by navController.currentBackStackEntryAsState()
     val destination = backStack?.destination
+    val strings = LocalStrings.current
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -96,7 +101,7 @@ fun ApexLapApp(pendingRace: RaceRoute? = null, onPendingRaceOpened: () -> Unit =
                             }
                         },
                         icon = { Icon(item.icon, contentDescription = null) },
-                        label = { Text(item.label, maxLines = 1) },
+                        label = { Text(item.label(strings), maxLines = 1) },
                         colors = NavigationBarItemDefaults.colors(
                             indicatorColor = MaterialTheme.colorScheme.primary,
                             selectedIconColor = MaterialTheme.colorScheme.onPrimary,
@@ -112,6 +117,15 @@ fun ApexLapApp(pendingRace: RaceRoute? = null, onPendingRaceOpened: () -> Unit =
                     onRaceClick = { navController.navigate(RaceRoute(it.season, it.round)) },
                     onRemindersClick = { navController.navigate(RemindersRoute) },
                     onEncyclopediaClick = { navController.navigate(EncyclopediaRoute) },
+                    onSettingsClick = { navController.navigate(SettingsRoute) },
+                    onDriverClick = { navController.navigate(DriverRoute(it)) },
+                    onConstructorClick = { navController.navigate(ConstructorRoute(it)) },
+                )
+            }
+            composable<SettingsRoute> {
+                SettingsScreen(
+                    onBack = navController::popBackStack,
+                    onRemindersClick = { navController.navigate(RemindersRoute) },
                 )
             }
             composable<ResultsRoute> {
@@ -122,6 +136,7 @@ fun ApexLapApp(pendingRace: RaceRoute? = null, onPendingRaceOpened: () -> Unit =
                     onDriverClick = { navController.navigate(DriverRoute(it)) },
                     onCompareLaps = { navController.navigate(TelemetryRoute()) },
                     onEncyclopediaClick = { navController.navigate(EncyclopediaRoute) },
+                    onSettingsClick = { navController.navigate(SettingsRoute) },
                 )
             }
             composable<LiveRoute> {
