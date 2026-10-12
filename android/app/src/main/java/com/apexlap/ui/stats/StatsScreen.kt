@@ -45,7 +45,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.apexlap.domain.usecase.DriverProgression
 import com.apexlap.domain.usecase.DuelSide
 import com.apexlap.domain.usecase.HeadToHead
+import com.apexlap.domain.encyclopedia.matchesSearch
+import com.apexlap.domain.usecase.DriverRetirements
 import com.apexlap.domain.usecase.LeaderBoard
+import com.apexlap.domain.usecase.SeasonRetirements
+import com.apexlap.domain.usecase.SeasonRetirementsRecord
 import com.apexlap.ui.components.EmptyState
 import com.apexlap.ui.components.LoadingState
 import com.apexlap.ui.components.OfflineBanner
@@ -171,9 +175,71 @@ fun StatsScreen(
                         modifier = Modifier.padding(top = 12.dp),
                     )
                 }
+                SeasonRetirementsRecord.of(state.season)?.let { record ->
+                    SectionHeader("Abandons · ${record.total}")
+                    StatsCard {
+                        RetirementsTable(record) { family ->
+                            // The record names drivers by family name: resolve the id from this season's results.
+                            state.drivers.firstOrNull { it.driver.familyName.matchesSearch(family) }?.let { onDriverClick(it.driver.id) }
+                        }
+                    }
+                }
                 Spacer(Modifier.height(24.dp))
             }
         }
+    }
+}
+
+@Composable
+private fun RetirementsTable(record: SeasonRetirements, onDriverClick: (String) -> Unit) {
+    val max = record.drivers.maxOfOrNull { it.count } ?: 1
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        record.drivers.forEach { RetirementRow(it, max) { onDriverClick(it.driver) } }
+        if (record.noRetirement.isNotEmpty()) {
+            Text(
+                "Aucun abandon : ${record.noRetirement.joinToString(", ")}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        if (record.nonStarters.isNotEmpty()) {
+            Text(
+                "Non-partants (DNS) : " + record.nonStarters.joinToString(", ") { "${it.driver} (${it.grandsPrix.joinToString(", ")})" },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Text(
+            "* abandon mais classé quand même · NC : non classé",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun RetirementRow(entry: DriverRetirements, max: Int, onClick: () -> Unit) {
+    Column(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(entry.driver, style = MaterialTheme.typography.titleSmall, modifier = Modifier.width(96.dp))
+            Box(Modifier.weight(1f).height(6.dp).clip(RoundedCornerShape(3.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
+                Box(
+                    Modifier.fillMaxHeight().fillMaxWidth(entry.count / max.toFloat())
+                        .clip(RoundedCornerShape(3.dp)).background(MaterialTheme.colorScheme.error),
+                )
+            }
+            Text(
+                entry.count.toString(),
+                style = MaterialTheme.typography.titleSmall,
+                textAlign = TextAlign.End,
+                modifier = Modifier.width(32.dp),
+            )
+        }
+        Text(
+            entry.retirements.joinToString(", ") { it.label },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
