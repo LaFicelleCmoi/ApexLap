@@ -65,7 +65,7 @@ object LiveTimingReducer {
     }
 
     private fun LiveTimingState.update(driver: Int, transform: (DriverTiming) -> DriverTiming): LiveTimingState {
-        val timing = timings[driver] ?: DriverTiming(LiveDriver(driver, "#$driver", "Pilote $driver", "", null))
+        val timing = timings[driver] ?: DriverTiming(LiveDriver(driver, "#$driver", "#$driver", "", null))
         return copy(timings = timings + (driver to transform(timing)))
     }
 }
