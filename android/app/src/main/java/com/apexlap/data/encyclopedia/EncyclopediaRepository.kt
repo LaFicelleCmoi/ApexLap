@@ -11,7 +11,10 @@ import com.apexlap.data.remote.JolpicaApi
 import com.apexlap.data.remote.toDomain
 import com.apexlap.domain.encyclopedia.ChampionsRegistry
 import com.apexlap.domain.encyclopedia.CircuitHistory
+import com.apexlap.domain.encyclopedia.CircuitRecords
 import com.apexlap.domain.encyclopedia.CircuitWin
+import com.apexlap.domain.encyclopedia.LapRecord
+import com.apexlap.domain.encyclopedia.parseLapTime
 import com.apexlap.domain.encyclopedia.SeasonWinner
 import com.apexlap.domain.model.Circuit
 import com.apexlap.domain.model.Constructor
@@ -40,6 +43,7 @@ class EncyclopediaRepository @Inject constructor(
     @Volatile private var registry: ChampionsRegistry? = null
     private val circuitHistories = ConcurrentHashMap<String, CircuitHistory>()
     private val seasonWinners = ConcurrentHashMap<Int, List<SeasonWinner>>()
+    private val circuitRecords = ConcurrentHashMap<String, CircuitRecords>()
 
     suspend fun champions(): ChampionsRegistry = registry ?: withContext(Dispatchers.IO) {
         ChampionsRegistry(ChampionsAsset.load(context, json)).also { registry = it }
@@ -95,4 +99,18 @@ class EncyclopediaRepository @Inject constructor(
             val winner = dto.results.firstOrNull()?.toDomain() ?: return@mapNotNull null
             SeasonWinner(dto.toDomain(), winner)
         }.sortedBy { it.race.round }.also { seasonWinners[season] = it }
+
+    suspend fun circuitRecords(circuitId: String): CircuitRecords = circuitRecords[circuitId] ?: run {
+        val raceLap = api.circuitFastestLaps(circuitId).data.raceTable.races.mapNotNull { race ->
+            val result = race.results.firstOrNull()?.toDomain() ?: return@mapNotNull null
+            val time = result.fastestLapTime ?: return@mapNotNull null
+            val millis = parseLapTime(time) ?: return@mapNotNull null
+            millis to LapRecord(time, race.season.toInt(), result.driver, result.constructor)
+        }.minByOrNull { it.first }?.second
+        val poleSitters = api.circuitPoleSitters(circuitId).data.raceTable.races
+            .mapNotNull { it.results.firstOrNull()?.toDomain()?.driver }
+            .groupBy { it.id }.values.map { it.first() to it.size }
+            .sortedWith(compareByDescending<Pair<Driver, Int>> { it.second }.thenBy { it.first.familyName }).take(3)
+        CircuitRecords(raceLap, poleSitters)
+    }.also { circuitRecords[circuitId] = it }
 }
