@@ -1,5 +1,9 @@
 package com.apexlap.ui.stats
 
+import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.outlined.Settings
+import com.apexlap.domain.usecase.grandPrixName
+import com.apexlap.i18n.LocalStrings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -58,7 +62,6 @@ import com.apexlap.ui.components.TeamStripe
 import com.apexlap.ui.components.formatPoints
 import com.apexlap.ui.theme.ChartPalette
 import com.apexlap.ui.theme.TeamColors
-import java.util.Locale
 
 private const val CHART_DRIVERS = 5
 
@@ -68,32 +71,38 @@ fun StatsScreen(
     onDriverClick: (String) -> Unit,
     onCompareLaps: () -> Unit,
     onEncyclopediaClick: () -> Unit,
+    onSettingsClick: () -> Unit,
     viewModel: StatsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val strings = LocalStrings.current
     val progression = state.progression
 
     PullToRefreshBox(isRefreshing = state.isRefreshing && progression != null, onRefresh = { viewModel.refresh(force = true) }) {
         when {
             progression == null && state.isRefreshing -> LoadingState()
             progression == null -> EmptyState(
-                state.error ?: "Pas encore de course disputée en ${state.season}",
+                state.error ?: strings.noRaceYet(state.season),
                 onRetry = { viewModel.refresh(force = true) },
             )
             else -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                Text(
-                    "STATS ${state.season}",
-                    style = MaterialTheme.typography.displaySmall,
-                    modifier = Modifier.statusBarsPadding().padding(16.dp),
-                )
+                Row(
+                    Modifier.statusBarsPadding().padding(start = 16.dp, top = 16.dp, end = 8.dp, bottom = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(strings.statsTitle(state.season), style = MaterialTheme.typography.displaySmall, modifier = Modifier.weight(1f))
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(Icons.Outlined.Settings, contentDescription = strings.settings)
+                    }
+                }
                 state.error?.let { OfflineBanner(it, onRetry = { viewModel.refresh(force = true) }) }
 
-                SectionHeader("Évolution du championnat")
+                SectionHeader(strings.championshipProgression)
                 StatsCard {
                     val top = progression.drivers.take(CHART_DRIVERS)
                     val series = top.mapIndexed { i, d -> ChartSeries(d.driver.code, ChartPalette[i], d.cumulativePoints) }
                     Text(
-                        "Points cumulés des ${top.size} premiers · touchez le graphique pour voir chaque manche",
+                        strings.cumulativePointsHint(top.size),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -110,9 +119,9 @@ fun StatsScreen(
                 ) {
                     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text("Comparateur de tours", style = MaterialTheme.typography.titleMedium)
+                            Text(strings.lapComparison, style = MaterialTheme.typography.titleMedium)
                             Text(
-                                "Télémétrie de deux pilotes superposée : vitesse, gaz, freins, écart et carte du circuit.",
+                                strings.lapComparisonHint,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -128,9 +137,9 @@ fun StatsScreen(
                 ) {
                     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text("Encyclopédie", style = MaterialTheme.typography.titleMedium)
+                            Text(strings.encyclopedia, style = MaterialTheme.typography.titleMedium)
                             Text(
-                                "Toutes les saisons depuis 1950, 881 pilotes, les écuries, les circuits et un glossaire.",
+                                strings.encyclopediaHint,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -139,7 +148,7 @@ fun StatsScreen(
                     }
                 }
 
-                SectionHeader("Leaders de la saison")
+                SectionHeader(strings.seasonLeaders)
                 Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     state.leaders.chunked(2).forEach { pair ->
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -149,7 +158,7 @@ fun StatsScreen(
                     }
                 }
 
-                SectionHeader("Duel")
+                SectionHeader(strings.duel)
                 StatsCard {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         DriverPicker(state.drivers, state.firstId, ChartPalette[0], viewModel::selectFirst, Modifier.weight(1f))
@@ -169,14 +178,14 @@ fun StatsScreen(
                             ChartLegend(series)
                         }
                     } ?: Text(
-                        "Choisissez deux pilotes différents.",
+                        strings.pickTwoDrivers,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 12.dp),
                     )
                 }
                 SeasonRetirementsRecord.of(state.season)?.let { record ->
-                    SectionHeader("Abandons · ${record.total}")
+                    SectionHeader("${strings.retirements} · ${record.total}")
                     StatsCard {
                         RetirementsTable(record) { family ->
                             // The record names drivers by family name: resolve the id from this season's results.
@@ -192,25 +201,28 @@ fun StatsScreen(
 
 @Composable
 private fun RetirementsTable(record: SeasonRetirements, onDriverClick: (String) -> Unit) {
+    val strings = LocalStrings.current
     val max = record.drivers.maxOfOrNull { it.count } ?: 1
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         record.drivers.forEach { RetirementRow(it, max) { onDriverClick(it.driver) } }
         if (record.noRetirement.isNotEmpty()) {
             Text(
-                "Aucun abandon : ${record.noRetirement.joinToString(", ")}",
+                strings.noRetirement(record.noRetirement.joinToString(", ")),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.primary,
             )
         }
         if (record.nonStarters.isNotEmpty()) {
             Text(
-                "Non-partants (DNS) : " + record.nonStarters.joinToString(", ") { "${it.driver} (${it.grandsPrix.joinToString(", ")})" },
+                strings.nonStarters + record.nonStarters.joinToString(", ") { starts ->
+                    "${starts.driver} (${starts.grandsPrix.joinToString(", ") { grandPrixName(it, strings.language) }})"
+                },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         Text(
-            "* abandon mais classé quand même · NC : non classé",
+            strings.retirementLegend,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -219,6 +231,7 @@ private fun RetirementsTable(record: SeasonRetirements, onDriverClick: (String) 
 
 @Composable
 private fun RetirementRow(entry: DriverRetirements, max: Int, onClick: () -> Unit) {
+    val language = LocalStrings.current.language
     Column(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(entry.driver, style = MaterialTheme.typography.titleSmall, modifier = Modifier.width(96.dp))
@@ -236,7 +249,7 @@ private fun RetirementRow(entry: DriverRetirements, max: Int, onClick: () -> Uni
             )
         }
         Text(
-            entry.retirements.joinToString(", ") { it.label },
+            entry.retirements.joinToString(", ") { it.label(language) },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -258,7 +271,7 @@ private fun StatsCard(content: @Composable () -> Unit) {
 private fun LeaderCard(board: LeaderBoard, onDriverClick: (String) -> Unit, modifier: Modifier = Modifier) {
     Surface(modifier, shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surface) {
         Column(Modifier.padding(12.dp)) {
-            Text(board.category.title.uppercase(), style = MaterialTheme.typography.labelSmall,
+            Text(LocalStrings.current.leader(board.category).uppercase(), style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(6.dp))
             if (board.entries.isEmpty()) {
@@ -307,18 +320,18 @@ private fun DriverPicker(
         ) {
             Box(Modifier.width(4.dp).height(20.dp).clip(RoundedCornerShape(2.dp)).background(color))
             Text(
-                selected?.driver?.familyName ?: "Pilote",
+                selected?.driver?.familyName ?: LocalStrings.current.driver,
                 style = MaterialTheme.typography.titleSmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f).padding(start = 8.dp),
             )
-            Icon(Icons.Outlined.ArrowDropDown, contentDescription = "Choisir un pilote")
+            Icon(Icons.Outlined.ArrowDropDown, contentDescription = LocalStrings.current.pickDriver)
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             drivers.forEach { d ->
                 DropdownMenuItem(
-                    text = { Text("${d.driver.fullName} · ${d.total.formatPoints()} pts") },
+                    text = { Text("${d.driver.fullName} · ${d.total.formatPoints()} ${LocalStrings.current.pts}") },
                     leadingIcon = { TeamStripe(TeamColors.of(d.constructor.id), height = 18.dp) },
                     onClick = {
                         expanded = false
@@ -343,23 +356,24 @@ private data class DuelMetric(
 private fun DuelTable(duel: HeadToHead) {
     val a = duel.first
     val b = duel.second
+    val strings = LocalStrings.current
     val metrics = listOf(
-        DuelMetric("Points", a.points, b.points, format = Double::formatPoints),
-        DuelMetric("Devant en course", a.racesAhead.toDouble(), b.racesAhead.toDouble()),
-        DuelMetric("Devant au départ", a.startsAhead.toDouble(), b.startsAhead.toDouble()),
-        DuelMetric("Victoires", a.wins.toDouble(), b.wins.toDouble()),
-        DuelMetric("Podiums", a.podiums.toDouble(), b.podiums.toDouble()),
-        DuelMetric("Poles", a.poles.toDouble(), b.poles.toDouble()),
-        DuelMetric("Meilleur résultat", a.bestFinish?.toDouble(), b.bestFinish?.toDouble(),
+        DuelMetric(strings.statPoints, a.points, b.points, format = Double::formatPoints),
+        DuelMetric(strings.aheadInRace, a.racesAhead.toDouble(), b.racesAhead.toDouble()),
+        DuelMetric(strings.aheadOnGrid, a.startsAhead.toDouble(), b.startsAhead.toDouble()),
+        DuelMetric(strings.statWins, a.wins.toDouble(), b.wins.toDouble()),
+        DuelMetric(strings.statPodiums, a.podiums.toDouble(), b.podiums.toDouble()),
+        DuelMetric(strings.statPolesShort, a.poles.toDouble(), b.poles.toDouble()),
+        DuelMetric(strings.bestFinish, a.bestFinish?.toDouble(), b.bestFinish?.toDouble(),
             format = { "P${it.toInt()}" }, lowerIsBetter = true, showBars = false),
-        DuelMetric("Arrivée moyenne", a.averageFinish, b.averageFinish,
-            format = { String.format(Locale.FRENCH, "%.1f", it) }, lowerIsBetter = true, showBars = false),
-        DuelMetric("Abandons", a.dnfs.toDouble(), b.dnfs.toDouble(), lowerIsBetter = true),
+        DuelMetric(strings.averageFinish, a.averageFinish, b.averageFinish,
+            format = { String.format(strings.language.locale, "%.1f", it) }, lowerIsBetter = true, showBars = false),
+        DuelMetric(strings.retirements, a.dnfs.toDouble(), b.dnfs.toDouble(), lowerIsBetter = true),
     )
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             DuelName(a, Modifier.weight(1f), TextAlign.Start)
-            Text("${duel.sharedRaces} GP", style = MaterialTheme.typography.labelSmall,
+            Text(strings.sharedRaces(duel.sharedRaces), style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             DuelName(b, Modifier.weight(1f), TextAlign.End)
         }
