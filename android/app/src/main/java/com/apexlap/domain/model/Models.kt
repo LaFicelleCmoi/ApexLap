@@ -3,14 +3,15 @@ package com.apexlap.domain.model
 import java.time.Instant
 import java.time.LocalDate
 
-enum class SessionType(val label: String, val shortLabel: String) {
-    PRACTICE_1("Essais libres 1", "EL1"),
-    PRACTICE_2("Essais libres 2", "EL2"),
-    PRACTICE_3("Essais libres 3", "EL3"),
-    SPRINT_QUALIFYING("Qualifications sprint", "SQ"),
-    SPRINT("Sprint", "SPR"),
-    QUALIFYING("Qualifications", "Q"),
-    RACE("Course", "GP"),
+/** Labels are localised by `Strings.session`. */
+enum class SessionType {
+    PRACTICE_1,
+    PRACTICE_2,
+    PRACTICE_3,
+    SPRINT_QUALIFYING,
+    SPRINT,
+    QUALIFYING,
+    RACE,
 }
 
 data class Session(
