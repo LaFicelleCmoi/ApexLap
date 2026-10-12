@@ -1,5 +1,7 @@
 package com.apexlap.ui.race
 
+import com.apexlap.i18n.Strings
+import com.apexlap.i18n.LocalStrings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -50,7 +52,7 @@ import com.apexlap.ui.components.longDay
 import com.apexlap.ui.theme.ApexColors
 import com.apexlap.ui.theme.TeamColors
 
-private enum class WeekendTab(val label: String) { RACE("COURSE"), QUALIFYING("QUALIFS"), SPRINT("SPRINT") }
+private enum class WeekendTab(val label: (Strings) -> String) { RACE(Strings::tabRace), QUALIFYING(Strings::tabQualifying), SPRINT(Strings::tabSprint) }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,6 +63,7 @@ fun RaceScreen(
     viewModel: RaceViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val strings = LocalStrings.current
     val race = state.race
     val tabs = if (race?.isSprintWeekend == true) WeekendTab.entries else listOf(WeekendTab.RACE, WeekendTab.QUALIFYING)
     var selectedName by rememberSaveable { mutableStateOf<String?>(null) }
@@ -72,7 +75,7 @@ fun RaceScreen(
         else -> WeekendTab.RACE
     }
 
-    DetailScaffold(title = race?.name ?: "Grand Prix", onBack = onBack) { padding ->
+    DetailScaffold(title = race?.name ?: strings.grandPrix, onBack = onBack) { padding ->
         PullToRefreshBox(
             isRefreshing = state.isRefreshing,
             onRefresh = viewModel::refresh,
@@ -82,7 +85,7 @@ fun RaceScreen(
                 if (race != null) {
                     item {
                         Column(Modifier.padding(horizontal = 16.dp)) {
-                            Text("MANCHE ${race.round} · ${race.season}", style = MaterialTheme.typography.labelMedium,
+                            Text(strings.roundOfSeason(race.round, race.season), style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.primary)
                             Text("${flagOf(race.circuit.country)}  ${race.circuit.name}", style = MaterialTheme.typography.headlineSmall)
                             Text("${race.circuit.locality}, ${race.circuit.country}", style = MaterialTheme.typography.bodyMedium,
@@ -93,9 +96,9 @@ fun RaceScreen(
                     if (!facts.isEmpty) {
                         item { FactsCard(facts, onDriverClick) }
                     }
-                    item { SectionHeader("Contexte") }
+                    item { SectionHeader(strings.context) }
                     item { ContextBlock(state.context, onDriverClick) { onCircuitClick(race.circuit.id) } }
-                    item { SectionHeader("Programme (heure locale)") }
+                    item { SectionHeader(strings.schedule) }
                     items(race.sessions, key = { it.type }) { SessionRow(it) }
                 }
                 state.error?.let { item { OfflineBanner(it, viewModel::refresh) } }
@@ -108,7 +111,7 @@ fun RaceScreen(
                             modifier = Modifier.padding(top = 16.dp),
                         ) {
                             tabs.forEach { tab ->
-                                Tab(selected = tab == selected, onClick = { selectedName = tab.name }, text = { Text(tab.label) })
+                                Tab(selected = tab == selected, onClick = { selectedName = tab.name }, text = { Text(tab.label(strings)) })
                             }
                         }
                     }
@@ -120,7 +123,7 @@ fun RaceScreen(
                 } else if (race != null) {
                     item {
                         Text(
-                            "Les résultats apparaîtront ici dès le début du week-end.",
+                            strings.resultsSoon,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(16.dp),
@@ -162,7 +165,7 @@ private fun EmptySession(isRefreshing: Boolean) {
         if (isRefreshing) {
             CircularProgressIndicator()
         } else {
-            Text("Pas encore de résultats pour cette séance.", style = MaterialTheme.typography.bodyMedium,
+            Text(LocalStrings.current.noSessionResults, style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
@@ -175,13 +178,13 @@ private fun SessionRow(session: Session) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = RoundedCornerShape(8.dp)) {
-            Text(session.type.shortLabel, style = MaterialTheme.typography.labelMedium,
+            Text(LocalStrings.current.sessionShort(session.type), style = MaterialTheme.typography.labelMedium,
                 modifier = Modifier.width(48.dp).padding(vertical = 6.dp), textAlign = TextAlign.Center)
         }
-        Text(session.type.label, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
+        Text(LocalStrings.current.session(session.type), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
         Column(horizontalAlignment = Alignment.End) {
             Text(session.startsAt?.localDay() ?: session.date.longDay(), style = MaterialTheme.typography.bodySmall)
-            Text(session.startsAt?.localTime() ?: "Horaire à venir", style = MaterialTheme.typography.labelMedium)
+            Text(session.startsAt?.localTime() ?: LocalStrings.current.timeTba, style = MaterialTheme.typography.labelMedium)
         }
     }
 }
@@ -203,7 +206,7 @@ private fun ResultRow(result: RaceResult, onClick: () -> Unit) {
             Text(result.time ?: result.status, style = MaterialTheme.typography.bodySmall)
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 if (result.hasFastestLap) {
-                    Text("⏱ MT", style = MaterialTheme.typography.labelSmall, color = ApexColors.PurpleSector)
+                    Text(LocalStrings.current.fastestLapShort, style = MaterialTheme.typography.labelSmall, color = ApexColors.PurpleSector)
                 }
                 result.positionsGained?.takeIf { it != 0 }?.let { gained ->
                     Text(
@@ -212,7 +215,7 @@ private fun ResultRow(result: RaceResult, onClick: () -> Unit) {
                         color = if (gained > 0) ApexColors.GreenSector else MaterialTheme.colorScheme.error,
                     )
                 }
-                Text("+${result.points.formatPoints()} pts", style = MaterialTheme.typography.labelSmall)
+                Text("+${result.points.formatPoints()} ${LocalStrings.current.pts}", style = MaterialTheme.typography.labelSmall)
             }
         }
     }
@@ -243,7 +246,7 @@ private fun QualifyingRow(result: QualifyingResult, onClick: () -> Unit) {
                 color = if (result.position == 1) ApexColors.PurpleSector else MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                result.eliminatedIn?.let { "ÉLIMINÉ EN $it" } ?: "Q3",
+                result.eliminatedIn?.let { LocalStrings.current.eliminatedIn(it) } ?: "Q3",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -253,12 +256,13 @@ private fun QualifyingRow(result: QualifyingResult, onClick: () -> Unit) {
 
 @Composable
 private fun FactsCard(facts: GrandPrixFacts, onDriverClick: (String) -> Unit) {
+    val strings = LocalStrings.current
     Surface(Modifier.fillMaxWidth().padding(16.dp), shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
         Column(Modifier.padding(vertical = 8.dp)) {
-            facts.winner?.let { FactRow("🏆 Vainqueur", it.driver.fullName, it.constructor.name, ApexColors.Gold) { onDriverClick(it.driver.id) } }
-            facts.pole?.let { FactRow("Pole position", it.fullName, facts.poleTime.orEmpty(), ApexColors.PurpleSector) { onDriverClick(it.id) } }
+            facts.winner?.let { FactRow(strings.winner, it.driver.fullName, it.constructor.name, ApexColors.Gold) { onDriverClick(it.driver.id) } }
+            facts.pole?.let { FactRow(strings.polePosition, it.fullName, facts.poleTime.orEmpty(), ApexColors.PurpleSector) { onDriverClick(it.id) } }
             facts.fastestLap?.let {
-                FactRow("⏱ Meilleur tour", it.driver.fullName, it.fastestLapTime.orEmpty(), ApexColors.PurpleSector) { onDriverClick(it.driver.id) }
+                FactRow(strings.fastestLap, it.driver.fullName, it.fastestLapTime.orEmpty(), ApexColors.PurpleSector) { onDriverClick(it.driver.id) }
             }
         }
     }
@@ -279,15 +283,16 @@ private fun FactRow(label: String, name: String, detail: String, accent: android
 
 @Composable
 private fun ContextBlock(context: GrandPrixContext?, onDriverClick: (String) -> Unit, onCircuitClick: () -> Unit) {
+    val strings = LocalStrings.current
     Column(Modifier.padding(horizontal = 16.dp)) {
         context?.let {
             Text(
-                if (it.edition == 1) "Premier Grand Prix disputé sur ce circuit." else "${it.edition}e Grand Prix disputé sur ce circuit.",
+                strings.edition(it.edition),
                 style = MaterialTheme.typography.bodyMedium,
             )
             it.previousWinner?.let { win ->
                 Text(
-                    "Vainqueur précédent : ${win.driver.fullName} (${win.constructor.name}, ${win.season})",
+                    strings.previousWinner(win.driver.fullName, win.constructor.name, win.season),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.clickable { onDriverClick(win.driver.id) },
@@ -295,7 +300,7 @@ private fun ContextBlock(context: GrandPrixContext?, onDriverClick: (String) -> 
             }
             it.mostWins?.let { (driver, wins) ->
                 Text(
-                    "Recordman des victoires ici : ${driver.fullName} ($wins)",
+                    strings.mostWinsHere(driver.fullName, wins),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.clickable { onDriverClick(driver.id) },
@@ -303,7 +308,7 @@ private fun ContextBlock(context: GrandPrixContext?, onDriverClick: (String) -> 
             }
         }
         Text(
-            "Fiche du circuit ›",
+            strings.circuitPage,
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.clickable(onClick = onCircuitClick).padding(vertical = 8.dp),
