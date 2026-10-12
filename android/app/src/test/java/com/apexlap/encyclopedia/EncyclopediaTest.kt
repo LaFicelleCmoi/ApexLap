@@ -64,9 +64,22 @@ class EncyclopediaTest {
     }
 
     @Test
-    fun `glossary terms are unique and defined`() {
-        assertEquals(Glossary.terms.size, Glossary.terms.map { it.term }.toSet().size)
-        assertTrue(Glossary.terms.all { it.definition.length > 20 })
+    fun `glossary terms are unique and defined in every language`() {
+        com.apexlap.i18n.AppLanguage.entries.forEach { language ->
+            assertEquals(Glossary.terms.size, Glossary.terms.map { it.term[language] }.toSet().size)
+            assertTrue(Glossary.terms.all { it.definition[language].length > 20 })
+        }
+    }
+
+    @Test
+    fun `driver bio is written in the chosen language`() {
+        val driver = results.first().driver.copy(dateOfBirth = LocalDate.of(1997, 9, 30))
+        val profile = DriverProfile(driver, CareerStats(seasons = 12, races = 230, wins = 70, podiums = 120, poles = 45))
+        val today = LocalDate.of(2026, 10, 12)
+        val en = driverBio(profile, Titles(1, listOf(2021)), null, 2026, today, com.apexlap.i18n.AppLanguage.EN)
+        assertTrue(en, en.contains("(29 years old)") && en.contains("World champion (2021)") && en.contains("230 Grands Prix over 12 seasons: 70 wins"))
+        val es = driverBio(profile, Titles.NONE, null, 2026, today, com.apexlap.i18n.AppLanguage.ES)
+        assertTrue(es, es.contains("(29 años)") && es.contains("230 Grandes Premios en 12 temporadas: 70 victorias"))
     }
 
     @Test
@@ -120,6 +133,7 @@ class EncyclopediaTest {
             standing = null,
             season = 2026,
             today = LocalDate.of(2026, 10, 12),
+            language = com.apexlap.i18n.AppLanguage.FR,
         )
         assertTrue(bio, bio.contains("(29 ans)"))
         assertTrue(bio, bio.contains("4 fois champion du monde (2021–2024)"))
@@ -159,7 +173,7 @@ class EncyclopediaTest {
 
     @Test
     fun `circuit guides exist for the calendar circuits`() {
-        assertTrue(CircuitGuides.of("spa")!!.corners.any { it.name.contains("Eau Rouge") })
+        assertTrue(CircuitGuides.of("spa")!!.corners.any { it.name.en.contains("Eau Rouge") })
         assertNull(CircuitGuides.of("unknown"))
     }
 
