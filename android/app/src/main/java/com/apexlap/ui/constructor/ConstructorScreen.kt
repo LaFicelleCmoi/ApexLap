@@ -1,5 +1,8 @@
 package com.apexlap.ui.constructor
 
+import com.apexlap.ui.favorites.FollowButton
+import com.apexlap.ui.favorites.FavoritesViewModel
+import com.apexlap.i18n.LocalStrings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -35,14 +38,29 @@ import com.apexlap.ui.theme.ApexColors
 import com.apexlap.ui.theme.TeamColors
 
 @Composable
-fun ConstructorScreen(onBack: () -> Unit, onDriverClick: (String) -> Unit, viewModel: ConstructorViewModel = hiltViewModel()) {
+fun ConstructorScreen(
+    onBack: () -> Unit,
+    onDriverClick: (String) -> Unit,
+    viewModel: ConstructorViewModel = hiltViewModel(),
+    favoritesViewModel: FavoritesViewModel = hiltViewModel(),
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val favorites by favoritesViewModel.uiState.collectAsStateWithLifecycle()
+    val strings = LocalStrings.current
     val profile = state.profile
 
-    DetailScaffold(title = profile?.constructor?.name ?: "Écurie", onBack = onBack) { padding ->
+    DetailScaffold(
+        title = profile?.constructor?.name ?: strings.team,
+        onBack = onBack,
+        actions = {
+            profile?.let {
+                FollowButton(isFollowed = favorites.constructorId == it.constructor.id) { favoritesViewModel.toggleConstructor(it.constructor.id) }
+            }
+        },
+    ) { padding ->
         when {
             profile == null && state.isRefreshing -> LoadingState(Modifier.padding(padding))
-            profile == null -> EmptyState(state.error ?: "Écurie introuvable", Modifier.padding(padding), { viewModel.refresh(force = true) })
+            profile == null -> EmptyState(state.error ?: strings.teamNotFound, Modifier.padding(padding), { viewModel.refresh(force = true) })
             else -> {
                 val color = TeamColors.of(profile.constructor.id)
                 Column(Modifier.padding(padding).verticalScroll(rememberScrollState())) {
@@ -63,21 +81,21 @@ fun ConstructorScreen(onBack: () -> Unit, onDriverClick: (String) -> Unit, viewM
                     }
 
                     state.bio?.let { bio ->
-                        SectionHeader("Bio")
+                        SectionHeader(strings.bio)
                         Text(bio, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 16.dp))
                     }
 
                     state.standing?.let { standing ->
-                        SectionHeader("Saison ${state.season}")
+                        SectionHeader(strings.seasonHeader(state.season))
                         Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            StatTile("Position", "P${standing.position}", color, Modifier.weight(1f))
-                            StatTile("Points", standing.points.formatPoints(), color, Modifier.weight(1f))
-                            StatTile("Victoires", standing.wins.toString(), color, Modifier.weight(1f))
+                            StatTile(strings.statPosition, "P${standing.position}", color, Modifier.weight(1f))
+                            StatTile(strings.statPoints, standing.points.formatPoints(), color, Modifier.weight(1f))
+                            StatTile(strings.statWins, standing.wins.toString(), color, Modifier.weight(1f))
                         }
                     }
 
                     if (state.drivers.isNotEmpty()) {
-                        SectionHeader("Pilotes")
+                        SectionHeader(strings.drivers)
                         state.drivers.forEach { driver ->
                             Row(
                                 Modifier.fillMaxWidth().clickable { onDriverClick(driver.driver.id) }.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -86,7 +104,7 @@ fun ConstructorScreen(onBack: () -> Unit, onDriverClick: (String) -> Unit, viewM
                                 Helmet(color, size = 44.dp)
                                 Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                                     Text(driver.driver.fullName, style = MaterialTheme.typography.titleMedium)
-                                    Text("P${driver.position} · ${driver.points.formatPoints()} pts", style = MaterialTheme.typography.bodySmall,
+                                    Text("P${driver.position} · ${driver.points.formatPoints()} ${strings.pts}", style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                                 Text(driver.driver.number ?: "", style = MaterialTheme.typography.headlineSmall, color = color)
@@ -95,25 +113,25 @@ fun ConstructorScreen(onBack: () -> Unit, onDriverClick: (String) -> Unit, viewM
                     }
 
                     if (state.titles.count > 0) {
-                        SectionHeader("Titres constructeurs")
+                        SectionHeader(strings.constructorTitles)
                         TitlesRow(state.titles)
                     }
 
-                    SectionHeader("Historique")
+                    SectionHeader(strings.history)
                     val stats = profile.stats
                     Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            StatTile("Saisons", stats.seasons.toString(), MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
-                            StatTile("Départs", stats.races.toString(), MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
+                            StatTile(strings.statSeasons, stats.seasons.toString(), MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
+                            StatTile(strings.statStarts, stats.races.toString(), MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            StatTile("Victoires", stats.wins.toString(), ApexColors.Gold, Modifier.weight(1f))
-                            StatTile("Podiums", stats.podiums.toString(), ApexColors.Silver, Modifier.weight(1f))
-                            StatTile("Poles", stats.poles.toString(), ApexColors.PurpleSector, Modifier.weight(1f))
+                            StatTile(strings.statWins, stats.wins.toString(), ApexColors.Gold, Modifier.weight(1f))
+                            StatTile(strings.statPodiums, stats.podiums.toString(), ApexColors.Silver, Modifier.weight(1f))
+                            StatTile(strings.statPolesShort, stats.poles.toString(), ApexColors.PurpleSector, Modifier.weight(1f))
                         }
                     }
                     Text(
-                        "Départs, victoires et podiums comptent chaque voiture classée.",
+                        strings.constructorStatsNote,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(16.dp),
