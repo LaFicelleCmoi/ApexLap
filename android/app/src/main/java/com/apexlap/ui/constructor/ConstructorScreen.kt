@@ -62,6 +62,11 @@ fun ConstructorScreen(onBack: () -> Unit, onDriverClick: (String) -> Unit, viewM
                         }
                     }
 
+                    state.bio?.let { bio ->
+                        SectionHeader("Bio")
+                        Text(bio, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 16.dp))
+                    }
+
                     state.standing?.let { standing ->
                         SectionHeader("Saison ${state.season}")
                         Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
