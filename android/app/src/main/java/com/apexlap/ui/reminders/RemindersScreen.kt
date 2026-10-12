@@ -1,5 +1,6 @@
 package com.apexlap.ui.reminders
 
+import com.apexlap.i18n.LocalStrings
 import android.Manifest
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
@@ -59,6 +60,7 @@ import com.apexlap.widget.NextSessionWidgetReceiver
 fun RemindersScreen(onBack: () -> Unit, viewModel: RemindersViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val strings = LocalStrings.current
     var permissionDenied by remember { mutableStateOf(false) }
     var notificationsAllowed by remember { mutableStateOf(context.notificationsAllowed()) }
 
@@ -80,14 +82,14 @@ fun RemindersScreen(onBack: () -> Unit, viewModel: RemindersViewModel = hiltView
         }
     }
 
-    DetailScaffold(title = "Rappels & widget", onBack = onBack) { padding ->
+    DetailScaffold(title = strings.remindersAndWidget, onBack = onBack) { padding ->
         Column(Modifier.padding(padding).verticalScroll(rememberScrollState())) {
             Card {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("Me prévenir avant les séances", style = MaterialTheme.typography.titleMedium)
+                        Text(strings.notifyBeforeSessions, style = MaterialTheme.typography.titleMedium)
                         Text(
-                            "Une notification avant chaque séance choisie, même app fermée.",
+                            strings.notifyBeforeSessionsHint,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -96,33 +98,33 @@ fun RemindersScreen(onBack: () -> Unit, viewModel: RemindersViewModel = hiltView
                 }
                 if (permissionDenied || (state.settings.enabled && !notificationsAllowed)) {
                     Warning(
-                        "Les notifications sont désactivées pour Apex Lap.",
-                        action = "Réglages",
+                        strings.notificationsDisabled,
+                        action = strings.settings,
                         onAction = { context.openNotificationSettings() },
                     )
                 }
                 if (state.settings.enabled && !state.exactAlarmsAllowed) {
                     Warning(
-                        "Sans l'autorisation « alarmes exactes », un rappel peut arriver quelques minutes en retard.",
-                        action = "Autoriser",
+                        strings.exactAlarmsWarning,
+                        action = strings.allow,
                         onAction = { context.openExactAlarmSettings() },
                     )
                 }
             }
 
             if (state.settings.enabled) {
-                SectionHeader("Combien de temps avant")
+                SectionHeader(strings.howLongBefore)
                 Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ReminderSettings.LEAD_OPTIONS.forEach { minutes ->
                         FilterChip(
                             selected = state.settings.leadMinutes == minutes,
                             onClick = { viewModel.setLeadMinutes(minutes) },
-                            label = { Text(if (minutes < 60) "$minutes min" else "${minutes / 60} h") },
+                            label = { Text(if (minutes < 60) strings.minutes(minutes) else strings.hours(minutes / 60)) },
                         )
                     }
                 }
 
-                SectionHeader("Quelles séances")
+                SectionHeader(strings.whichSessions)
                 Card {
                     ReminderScope.entries.forEach { scope ->
                         Row(
@@ -137,15 +139,15 @@ fun RemindersScreen(onBack: () -> Unit, viewModel: RemindersViewModel = hiltView
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             RadioButton(selected = state.settings.scope == scope, onClick = null)
-                            Text(scope.label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(start = 12.dp))
+                            Text(strings.reminderScope(scope), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(start = 12.dp))
                         }
                     }
                 }
 
-                SectionHeader("Prochains rappels")
+                SectionHeader(strings.upcomingReminders)
                 if (state.upcoming.isEmpty()) {
                     Text(
-                        "Aucune séance dans les 14 prochains jours.",
+                        strings.noSessionIn14Days,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 16.dp),
@@ -154,10 +156,10 @@ fun RemindersScreen(onBack: () -> Unit, viewModel: RemindersViewModel = hiltView
                 state.upcoming.take(8).forEach { UpcomingRow(it) }
             }
 
-            SectionHeader("Widget d'écran d'accueil")
+            SectionHeader(strings.homeWidget)
             Card {
                 Text(
-                    "Affiche la prochaine séance et le temps restant sur votre écran d'accueil.",
+                    strings.widgetHint,
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Spacer(Modifier.height(4.dp))
@@ -165,10 +167,10 @@ fun RemindersScreen(onBack: () -> Unit, viewModel: RemindersViewModel = hiltView
                 if (widgetManager.isRequestPinAppWidgetSupported) {
                     TextButton(onClick = {
                         widgetManager.requestPinAppWidget(ComponentName(context, NextSessionWidgetReceiver::class.java), null, null)
-                    }) { Text("AJOUTER LE WIDGET") }
+                    }) { Text(strings.addWidget) }
                 } else {
                     Text(
-                        "Appui long sur l'écran d'accueil → Widgets → Apex Lap.",
+                        strings.addWidgetManually,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -206,15 +208,16 @@ private fun Warning(message: String, action: String, onAction: () -> Unit) {
 @Composable
 private fun UpcomingRow(reminder: PlannedReminder) {
     val start = reminder.session.startsAt ?: return
+    val strings = LocalStrings.current
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(flagOf(reminder.race.circuit.country), style = MaterialTheme.typography.titleLarge)
         Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-            Text("${reminder.session.type.label} · ${reminder.race.name}", style = MaterialTheme.typography.titleSmall)
+            Text("${strings.session(reminder.session.type)} · ${reminder.race.name}", style = MaterialTheme.typography.titleSmall)
             Text(
-                "${start.localDay()} à ${start.localTime()} · rappel à ${reminder.triggerAt.localTime()}",
+                strings.reminderLine(start.localDay(), start.localTime(), reminder.triggerAt.localTime()),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
