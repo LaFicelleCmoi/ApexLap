@@ -151,6 +151,8 @@ fun ApexLapApp(pendingRace: RaceRoute? = null, onPendingRaceOpened: () -> Unit =
                     onRaceClick = { season, round -> navController.navigate(RaceRoute(season, round)) },
                     onDriverClick = { navController.navigate(DriverRoute(it)) },
                     onConstructorClick = { navController.navigate(ConstructorRoute(it)) },
+                    // Timeline: the next/previous season replaces the current one in the back stack.
+                    onSeasonClick = { navController.navigate(SeasonRoute(it)) { popUpTo<SeasonRoute> { inclusive = true } } },
                 )
             }
             composable<CircuitRoute> {
@@ -167,6 +169,7 @@ fun ApexLapApp(pendingRace: RaceRoute? = null, onPendingRaceOpened: () -> Unit =
                 RaceScreen(
                     onBack = navController::popBackStack,
                     onDriverClick = { navController.navigate(DriverRoute(it)) },
+                    onCircuitClick = { navController.navigate(CircuitRoute(it)) },
                 )
             }
             composable<DriverRoute> {
