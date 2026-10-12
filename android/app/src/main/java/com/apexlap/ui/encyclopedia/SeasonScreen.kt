@@ -26,7 +26,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.material3.TextButton
 import com.apexlap.domain.encyclopedia.Champion
+import com.apexlap.domain.encyclopedia.SeasonHighlights
 import com.apexlap.ui.components.DetailScaffold
 import com.apexlap.ui.components.OfflineBanner
 import com.apexlap.ui.components.PositionText
@@ -46,15 +48,22 @@ fun SeasonScreen(
     onRaceClick: (season: Int, round: Int) -> Unit,
     onDriverClick: (String) -> Unit,
     onConstructorClick: (String) -> Unit,
+    onSeasonClick: (Int) -> Unit,
     viewModel: SeasonViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     DetailScaffold(title = "Saison ${state.season}", onBack = onBack) { padding ->
         LazyColumn(Modifier.padding(padding), contentPadding = PaddingValues(bottom = 24.dp)) {
+            item { Timeline(state.previous, state.next, onSeasonClick) }
             if (state.isLoading) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
             state.error?.let { item { OfflineBanner(it, onRetry = viewModel::load) } }
             state.champion?.let { champion -> item { ChampionBanner(champion, onDriverClick, onConstructorClick) } }
+
+            state.highlights?.let { highlights ->
+                item { SectionHeader("Moments forts") }
+                item { Highlights(highlights, isFinished = state.champion != null, onDriverClick) }
+            }
 
             if (state.winners.isNotEmpty()) {
                 item { SectionHeader("Grands Prix · ${state.winners.size}") }
@@ -106,6 +115,48 @@ fun SeasonScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun Timeline(previous: Int?, next: Int?, onSeasonClick: (Int) -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+        TextButton(onClick = { previous?.let(onSeasonClick) }, enabled = previous != null) { Text(previous?.let { "‹ $it" } ?: "") }
+        TextButton(onClick = { next?.let(onSeasonClick) }, enabled = next != null) { Text(next?.let { "$it ›" } ?: "") }
+    }
+}
+
+@Composable
+private fun Highlights(highlights: SeasonHighlights, isFinished: Boolean, onDriverClick: (String) -> Unit) {
+    Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        highlights.topWinner?.let { (driver, wins) ->
+            HighlightLine("🏁", "${driver.fullName} remporte le plus de Grands Prix ($wins)") { onDriverClick(driver.id) }
+        }
+        highlights.topTeam?.let { (team, wins) -> HighlightLine("🏎", "${team.name} totalise $wins victoire" + if (wins > 1) "s" else "") }
+        HighlightLine("👥", "${highlights.differentWinners} vainqueur" + (if (highlights.differentWinners > 1) "s différents" else " unique"))
+        if (highlights.winsFromPole > 0) {
+            HighlightLine("🟣", "${highlights.winsFromPole} victoire" + (if (highlights.winsFromPole > 1) "s" else "") + " depuis la pole position")
+        }
+        highlights.deepestWin?.let { (race, winner) ->
+            HighlightLine("🚀", "${winner.driver.fullName} gagne en partant ${winner.grid}e (${race.name})") { onDriverClick(winner.driver.id) }
+        }
+        val margin = highlights.titleMargin
+        val runnerUp = highlights.runnerUp
+        if (margin != null && runnerUp != null) {
+            val label = if (isFinished) "Titre joué avec ${margin.formatPoints()} pts d'avance sur" else "${margin.formatPoints()} pts d'avance sur"
+            HighlightLine("⚖", "$label ${runnerUp.driver.fullName}") { onDriverClick(runnerUp.driver.id) }
+        }
+    }
+}
+
+@Composable
+private fun HighlightLine(icon: String, text: String, onClick: (() -> Unit)? = null) {
+    Row(
+        Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(icon, style = MaterialTheme.typography.bodyMedium)
+        Text(text, style = MaterialTheme.typography.bodyMedium)
     }
 }
 
