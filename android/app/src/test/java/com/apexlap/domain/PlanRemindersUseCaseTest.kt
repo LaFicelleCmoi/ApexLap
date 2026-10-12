@@ -73,10 +73,15 @@ class PlanRemindersUseCaseTest {
 
     @Test
     fun `relative start reads naturally`() {
+        com.apexlap.i18n.I18n.apply(com.apexlap.i18n.LanguagePreference.FR)
         assertEquals("dans 45 min", relativeStart(now, now.plusSeconds(45 * 60)))
         assertEquals("dans 3 h 05", relativeStart(now, now.plusSeconds(3 * 3600 + 5 * 60)))
         assertEquals("dans 2 h", relativeStart(now, now.plusSeconds(2 * 3600)))
         assertEquals("dans 2 j 4 h", relativeStart(now, now.plusSeconds(2 * 86400 + 4 * 3600 + 59)))
         assertEquals("maintenant", relativeStart(now, now.minusSeconds(5)))
+        com.apexlap.i18n.I18n.apply(com.apexlap.i18n.LanguagePreference.EN)
+        assertEquals("in 2 d 4 h", relativeStart(now, now.plusSeconds(2 * 86400 + 4 * 3600)))
+        com.apexlap.i18n.I18n.apply(com.apexlap.i18n.LanguagePreference.ES)
+        assertEquals("en 3 h 05", relativeStart(now, now.plusSeconds(3 * 3600 + 5 * 60)))
     }
 }
