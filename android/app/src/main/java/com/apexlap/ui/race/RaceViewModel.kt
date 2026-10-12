@@ -4,6 +4,9 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import com.apexlap.data.encyclopedia.EncyclopediaRepository
+import com.apexlap.domain.encyclopedia.GrandPrixContext
+import com.apexlap.domain.encyclopedia.GrandPrixFacts
 import com.apexlap.domain.model.QualifyingResult
 import com.apexlap.domain.model.Race
 import com.apexlap.domain.model.RaceResult
@@ -12,11 +15,14 @@ import com.apexlap.domain.usecase.Clock
 import com.apexlap.ui.components.OfflineFirstLoader
 import com.apexlap.ui.navigation.RaceRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
@@ -32,12 +38,17 @@ data class RaceUiState(
     val hasStarted: Boolean = false,
     val isRefreshing: Boolean = false,
     val error: String? = null,
-)
+    /** History of the circuit before this Grand Prix; null while loading or offline. */
+    val context: GrandPrixContext? = null,
+) {
+    val facts: GrandPrixFacts get() = GrandPrixFacts.of(results.race, results.qualifying)
+}
 
 @HiltViewModel
 class RaceViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: F1Repository,
+    private val encyclopedia: EncyclopediaRepository,
     private val clock: Clock,
 ) : ViewModel() {
 
@@ -57,8 +68,20 @@ class RaceViewModel @Inject constructor(
         refreshAction = { refreshWeekend() },
     )
 
-    val uiState: StateFlow<RaceUiState> = combine(race, results.state) { race, results ->
+    private val context = race.map { it?.circuit?.id }.distinctUntilChanged().map { circuitId ->
+        circuitId ?: return@map null
+        try {
+            encyclopedia.circuitHistory(circuitId).contextFor(route.season)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            null
+        }
+    }.onStart { emit(null) }
+
+    val uiState: StateFlow<RaceUiState> = combine(race, results.state, context) { race, results, context ->
         RaceUiState(
+            context = context,
             race = race,
             results = results.data ?: WeekendResults(),
             hasStarted = race?.hasStarted() == true,
