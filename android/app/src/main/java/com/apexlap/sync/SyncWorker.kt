@@ -13,21 +13,27 @@ import com.apexlap.domain.repository.F1Repository
 import com.apexlap.domain.usecase.Clock
 import com.apexlap.domain.usecase.currentSeason
 import com.apexlap.reminders.ReminderScheduler
+import com.apexlap.settings.SettingsStore
 import com.apexlap.widget.NextSessionWidget
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.first
 import java.util.concurrent.TimeUnit
 
-/** Background housekeeping: refresh the calendar, re-plan reminders, redraw the widget. */
+/** Background housekeeping: refresh the calendar (and standings when something is followed), re-plan reminders, redraw the widget. */
 class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
         val deps = EntryPointAccessors.fromApplication(applicationContext, BackgroundEntryPoint::class.java)
         try {
-            deps.repository().refreshCalendar(deps.clock().currentSeason())
+            val season = deps.clock().currentSeason()
+            deps.repository().refreshCalendar(season)
+            // The widget shows the followed driver and team's standings: keep them fresh too.
+            val settings = deps.settings().settings.first()
+            if (settings.favoriteDriverId != null || settings.favoriteConstructorId != null) deps.repository().refreshStandings(season)
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
@@ -61,4 +67,5 @@ interface BackgroundEntryPoint {
     fun repository(): F1Repository
     fun reminderScheduler(): ReminderScheduler
     fun clock(): Clock
+    fun settings(): SettingsStore
 }
