@@ -1,5 +1,6 @@
 package com.apexlap.data.openf1
 
+import com.apexlap.i18n.I18n
 import com.apexlap.domain.live.TimingEvent
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
@@ -48,7 +49,7 @@ class OpenF1LiveStream(
                             if (packet.returnCode == 0) {
                                 webSocket.send(MqttCodec.subscribe(1, TOPICS).toByteString())
                             } else {
-                                close(OpenF1AuthException("Connexion OpenF1 refusée (code ${packet.returnCode})"))
+                                close(OpenF1AuthException(I18n.strings.openF1Refused(packet.returnCode)))
                             }
                         is MqttCodec.Packet.Publish -> {
                             packet.packetId?.let { webSocket.send(MqttCodec.pubAck(it).toByteString()) }
@@ -60,7 +61,7 @@ class OpenF1LiveStream(
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                close(if (response?.code == 401) OpenF1AuthException("Jeton OpenF1 refusé") else t)
+                close(if (response?.code == 401) OpenF1AuthException(I18n.strings.openF1TokenRefused) else t)
             }
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
