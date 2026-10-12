@@ -124,7 +124,7 @@ class Strings(val language: AppLanguage) {
     val notRankedYet = t("Pas encore classé cette saison", "Not ranked yet this season", "Aún sin clasificar esta temporada")
 
     // Settings
-    val language = t("Langue", "Language", "Idioma")
+    val languageLabel = t("Langue", "Language", "Idioma")
     val systemLanguage = t("Langue du téléphone", "Phone language", "Idioma del teléfono")
     val notifications = t("Notifications", "Notifications", "Notificaciones")
     val remindersAndWidget = t("Rappels & widget", "Reminders & widget", "Recordatorios y widget")
