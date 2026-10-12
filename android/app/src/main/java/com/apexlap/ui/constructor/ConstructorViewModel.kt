@@ -1,5 +1,6 @@
 package com.apexlap.ui.constructor
 
+import com.apexlap.i18n.I18n
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -56,13 +57,14 @@ class ConstructorViewModel @Inject constructor(
         repository.observeConstructorStandings(season),
         repository.observeDriverStandings(season),
         flow { emit(encyclopedia.champions().constructorTitles(constructorId)) },
-    ) { profile, teams, drivers, titles ->
+        I18n.language,
+    ) { profile, teams, drivers, titles, language ->
         val standing = teams.firstOrNull { it.constructor.id == constructorId }
         ConstructorUiState(
             season = season,
             profile = profile.data,
             standing = standing,
-            bio = profile.data?.let { constructorBio(it, titles, standing, season) },
+            bio = profile.data?.let { constructorBio(it, titles, standing, season, language) },
             drivers = drivers.filter { it.constructor?.id == constructorId },
             titles = titles,
             isRefreshing = profile.isRefreshing,
