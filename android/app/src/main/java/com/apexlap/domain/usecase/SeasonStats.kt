@@ -42,14 +42,8 @@ class ComputeChampionshipProgressionUseCase @Inject constructor() {
 
 data class LeaderEntry(val driver: Driver, val constructor: Constructor, val value: Int)
 
-enum class LeaderCategory(val title: String) {
-    WINS("Victoires"),
-    PODIUMS("Podiums"),
-    POLES("Poles"),
-    FASTEST_LAPS("Meilleurs tours"),
-    POSITIONS_GAINED("Places gagnées"),
-    DNFS("Abandons"),
-}
+/** Titles are localised by `Strings.leader`. */
+enum class LeaderCategory { WINS, PODIUMS, POLES, FASTEST_LAPS, POSITIONS_GAINED, DNFS }
 
 data class LeaderBoard(val category: LeaderCategory, val entries: List<LeaderEntry>)
 
