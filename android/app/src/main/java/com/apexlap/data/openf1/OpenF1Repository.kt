@@ -1,5 +1,6 @@
 package com.apexlap.data.openf1
 
+import com.apexlap.i18n.I18n
 import com.apexlap.domain.live.LiveDriver
 import com.apexlap.domain.live.LiveSession
 import com.apexlap.domain.live.LiveTimingReducer
@@ -64,16 +65,16 @@ class OpenF1Repository @Inject constructor(
      * before the push feed takes over.
      */
     suspend fun liveSnapshot(): LiveTimingState {
-        val auth = "Bearer " + (tokens.token() ?: throw OpenF1AuthException("Aucun compte OpenF1 configuré"))
-        val session = api.session("latest", auth).firstOrNull()?.toDomain() ?: throw OpenF1AuthException("Aucune séance en cours")
+        val auth = "Bearer " + (tokens.token() ?: throw OpenF1AuthException(I18n.strings.noOpenF1Account))
+        val session = api.session("latest", auth).firstOrNull()?.toDomain() ?: throw OpenF1AuthException(I18n.strings.noLiveSession)
         val drivers = api.drivers("latest", auth).map { it.toDomain() }.distinctBy { it.number }
         val events = loadEvents("latest", auth, session)
         return events.sortedBy { it.date }.fold(LiveTimingReducer.initial(session, drivers), LiveTimingReducer::reduce)
     }
 
     fun liveEvents(): Flow<TimingEvent> = flow {
-        val account = credentials.account() ?: throw OpenF1AuthException("Aucun compte OpenF1 configuré")
-        val token = tokens.token() ?: throw OpenF1AuthException("Aucun compte OpenF1 configuré")
+        val account = credentials.account() ?: throw OpenF1AuthException(I18n.strings.noOpenF1Account)
+        val token = tokens.token() ?: throw OpenF1AuthException(I18n.strings.noOpenF1Account)
         liveStream.events(account.username, token).collect { emit(it) }
     }
 
