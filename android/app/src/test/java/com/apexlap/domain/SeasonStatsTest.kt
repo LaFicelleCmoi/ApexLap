@@ -28,10 +28,11 @@ class SeasonStatsTest {
         sprint: Boolean = false,
         positionText: String = position.toString(),
         fastest: Boolean = false,
+        status: String = "Finished",
     ) = ScoredResult(
         round,
         sprint,
-        RaceResult(position, positionText, points, grid, 50, "Finished", null, if (fastest) 1 else 5, null, driver,
+        RaceResult(position, positionText, points, grid, 50, status, null, if (fastest) 1 else 5, null, driver,
             if (driver == ant) mercedes else ferrari),
     )
 
@@ -86,5 +87,22 @@ class SeasonStatsTest {
     fun `no duel against oneself or an unknown driver`() {
         assertNull(ComputeHeadToHeadUseCase()(season, "antonelli", "antonelli"))
         assertNull(ComputeHeadToHeadUseCase()(season, "antonelli", "nobody"))
+    }
+
+    @Test
+    fun `classified retirements count as DNFs, non-starters and lapped finishers do not`() {
+        val rows = listOf(
+            result(1, ant, 14, 0.0, status = "Collision"),
+            result(2, ant, 12, 0.0, status = "+1 Lap"),
+            result(3, ant, 11, 0.0, status = "Lapped"),
+            result(4, ant, 0, 0.0, positionText = "W", status = "Did not start"),
+            result(5, ant, 0, 0.0, positionText = "D", status = "Disqualified"),
+            result(6, ant, 18, 0.0, positionText = "N", status = "Retired"),
+            result(1, lec, 1, 25.0), result(2, lec, 1, 25.0), result(3, lec, 1, 25.0),
+            result(4, lec, 1, 25.0), result(5, lec, 1, 25.0), result(6, lec, 1, 25.0),
+        )
+        assertEquals(2, ComputeHeadToHeadUseCase()(rows, "antonelli", "leclerc")!!.first.dnfs)
+        val dnfs = ComputeSeasonLeadersUseCase()(rows).single { it.category == LeaderCategory.DNFS }
+        assertEquals(listOf("antonelli" to 2), dnfs.entries.map { it.driver.id to it.value })
     }
 }
