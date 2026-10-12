@@ -76,12 +76,23 @@ class ComputeSeasonLeadersUseCase @Inject constructor() {
         LeaderCategory.POLES -> count { it.grid == 1 }
         LeaderCategory.FASTEST_LAPS -> count { it.hasFastestLap }
         LeaderCategory.POSITIONS_GAINED -> filter { it.isClassified }.sumOf { it.positionsGained ?: 0 }
-        LeaderCategory.DNFS -> count { !it.isClassified }
+        LeaderCategory.DNFS -> count { it.isRetirement }
     }
 }
 
 /** Classified finishers have a numeric `positionText`; R/D/W/N/E/F mark retirements and exclusions. */
 val RaceResult.isClassified: Boolean get() = positionText.isNotEmpty() && positionText.all(Char::isDigit)
+
+/**
+ * A retirement (DNF): not classified (R, N), or classified after covering 90 % of the distance but stopped
+ * before the flag (status other than a finish). Non-starters (W), disqualifications (D) and exclusions (E, F) are not.
+ */
+val RaceResult.isRetirement: Boolean get() = when {
+    status.contains("not start", ignoreCase = true) -> false
+    positionText == "R" || positionText == "N" -> true
+    isClassified -> !(status == "Finished" || status == "Lapped" || status.startsWith("+"))
+    else -> false
+}
 
 data class DuelSide(
     val driver: Driver,
@@ -126,7 +137,7 @@ class ComputeHeadToHeadUseCase @Inject constructor() {
                 poles = races.count { it.grid == 1 },
                 bestFinish = classified.minOfOrNull { it.position },
                 averageFinish = classified.map { it.position }.average().takeIf { classified.isNotEmpty() },
-                dnfs = races.count { !it.isClassified },
+                dnfs = races.count { it.isRetirement },
                 racesAhead = racesAhead,
                 startsAhead = startsAhead,
             )
