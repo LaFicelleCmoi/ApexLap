@@ -1,5 +1,8 @@
 package com.apexlap.domain.usecase
 
+import com.apexlap.i18n.AppLanguage
+import com.apexlap.i18n.L
+
 enum class RetirementKind {
     RETIRED,
     /** Retired but still classified (90 % of the race distance covered), marked "*". */
@@ -9,12 +12,40 @@ enum class RetirementKind {
 }
 
 data class Retirement(val grandPrix: String, val kind: RetirementKind = RetirementKind.RETIRED) {
-    val label: String get() = when (kind) {
-        RetirementKind.RETIRED -> grandPrix
-        RetirementKind.CLASSIFIED -> "$grandPrix*"
-        RetirementKind.NOT_CLASSIFIED -> "$grandPrix (NC)"
+    val label: String get() = label(AppLanguage.FR)
+
+    fun label(language: AppLanguage): String {
+        val name = grandPrixNames[grandPrix]?.get(language) ?: grandPrix
+        return when (kind) {
+            RetirementKind.RETIRED -> name
+            RetirementKind.CLASSIFIED -> "$name*"
+            RetirementKind.NOT_CLASSIFIED -> "$name (NC)"
+        }
     }
 }
+
+/** The record names Grands Prix by their French country (or city) name. */
+private val grandPrixNames = mapOf(
+    "Australie" to L("Australie", "Australia", "Australia"),
+    "Chine" to L("Chine", "China", "China"),
+    "Japon" to L("Japon", "Japan", "Japón"),
+    "Bahreïn" to L("Bahreïn", "Bahrain", "Baréin"),
+    "Miami" to L("Miami", "Miami", "Miami"),
+    "Canada" to L("Canada", "Canada", "Canadá"),
+    "Monaco" to L("Monaco", "Monaco", "Mónaco"),
+    "Barcelone" to L("Barcelone", "Barcelona", "Barcelona"),
+    "Autriche" to L("Autriche", "Austria", "Austria"),
+    "Grande-Bretagne" to L("Grande-Bretagne", "Great Britain", "Gran Bretaña"),
+    "Belgique" to L("Belgique", "Belgium", "Bélgica"),
+    "Hongrie" to L("Hongrie", "Hungary", "Hungría"),
+    "Pays-Bas" to L("Pays-Bas", "Netherlands", "Países Bajos"),
+    "Italie" to L("Italie", "Italy", "Italia"),
+    "Espagne" to L("Espagne", "Spain", "España"),
+    "Azerbaïdjan" to L("Azerbaïdjan", "Azerbaijan", "Azerbaiyán"),
+    "Singapour" to L("Singapour", "Singapore", "Singapur"),
+)
+
+fun grandPrixName(french: String, language: AppLanguage): String = grandPrixNames[french]?.get(language) ?: french
 
 data class DriverRetirements(val driver: String, val retirements: List<Retirement>) {
     val count: Int get() = retirements.size
