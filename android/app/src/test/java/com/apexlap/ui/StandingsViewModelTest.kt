@@ -60,7 +60,7 @@ class StandingsViewModelTest {
         api.offline = true
         val vm = viewModel()
         vm.uiState.test {
-            assertEquals("Hors ligne — affichage des données en cache", expectMostRecentItem().error)
+            assertEquals(com.apexlap.i18n.I18n.strings.offlineCached, expectMostRecentItem().error)
         }
     }
 }
