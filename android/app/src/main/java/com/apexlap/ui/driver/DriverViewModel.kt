@@ -1,5 +1,6 @@
 package com.apexlap.ui.driver
 
+import com.apexlap.i18n.I18n
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -56,11 +57,11 @@ class DriverViewModel @Inject constructor(
 
     private val titles = flow { emit(encyclopedia.champions().driverTitles(driverId)) }
 
-    val uiState: StateFlow<DriverUiState> = combine(profile.state, standing, titles) { profile, standing, titles ->
+    val uiState: StateFlow<DriverUiState> = combine(profile.state, standing, titles, I18n.language) { profile, standing, titles, language ->
         val today = clock.now().atZone(java.time.ZoneOffset.UTC).toLocalDate()
         DriverUiState(
             season, profile.data, standing, titles, profile.isRefreshing, profile.error,
-            bio = profile.data?.let { driverBio(it, titles, standing, season, today) },
+            bio = profile.data?.let { driverBio(it, titles, standing, season, today, language) },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DriverUiState(season, isRefreshing = true))
 
