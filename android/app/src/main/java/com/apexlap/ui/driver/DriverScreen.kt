@@ -1,5 +1,9 @@
 package com.apexlap.ui.driver
 
+import com.apexlap.ui.components.fullDate
+import com.apexlap.ui.favorites.FollowButton
+import com.apexlap.ui.favorites.FavoritesViewModel
+import com.apexlap.i18n.LocalStrings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -34,21 +38,33 @@ import com.apexlap.ui.components.StatTile
 import com.apexlap.ui.components.TitlesRow
 import com.apexlap.ui.components.flagOf
 import com.apexlap.ui.components.formatPoints
-import com.apexlap.ui.components.longDay
 import com.apexlap.ui.theme.ApexColors
 import com.apexlap.ui.theme.TeamColors
 
 @Composable
-fun DriverScreen(onBack: () -> Unit, onConstructorClick: (String) -> Unit, viewModel: DriverViewModel = hiltViewModel()) {
+fun DriverScreen(
+    onBack: () -> Unit,
+    onConstructorClick: (String) -> Unit,
+    viewModel: DriverViewModel = hiltViewModel(),
+    favoritesViewModel: FavoritesViewModel = hiltViewModel(),
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val favorites by favoritesViewModel.uiState.collectAsStateWithLifecycle()
+    val strings = LocalStrings.current
     val profile = state.profile
     val team = state.standing?.constructor
     val teamColor = TeamColors.of(team?.id)
 
-    DetailScaffold(title = profile?.driver?.fullName ?: "Pilote", onBack = onBack) { padding ->
+    DetailScaffold(
+        title = profile?.driver?.fullName ?: strings.driver,
+        onBack = onBack,
+        actions = {
+            profile?.let { FollowButton(isFollowed = favorites.driverId == it.driver.id) { favoritesViewModel.toggleDriver(it.driver.id) } }
+        },
+    ) { padding ->
         when {
             profile == null && state.isRefreshing -> LoadingState(Modifier.padding(padding))
-            profile == null -> EmptyState(state.error ?: "Pilote introuvable", Modifier.padding(padding), { viewModel.refresh(force = true) })
+            profile == null -> EmptyState(state.error ?: strings.driverNotFound, Modifier.padding(padding), { viewModel.refresh(force = true) })
             else -> Column(Modifier.padding(padding).verticalScroll(rememberScrollState())) {
                 state.error?.let { OfflineBanner(it, { viewModel.refresh(force = true) }) }
                 Surface(
@@ -83,7 +99,7 @@ fun DriverScreen(onBack: () -> Unit, onConstructorClick: (String) -> Unit, viewM
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Box(Modifier.padding(end = 8.dp).background(teamColor, RoundedCornerShape(3.dp)).padding(horizontal = 6.dp, vertical = 2.dp)) {
-                            Text("ÉCURIE", style = MaterialTheme.typography.labelSmall, color = ApexColors.Asphalt)
+                            Text(strings.teamBadge, style = MaterialTheme.typography.labelSmall, color = ApexColors.Asphalt)
                         }
                         Text(team.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                         Text("›", style = MaterialTheme.typography.titleLarge)
@@ -91,42 +107,42 @@ fun DriverScreen(onBack: () -> Unit, onConstructorClick: (String) -> Unit, viewM
                 }
 
                 state.bio?.let { bio ->
-                    SectionHeader("Bio")
+                    SectionHeader(strings.bio)
                     Text(bio, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 16.dp))
                 }
 
                 state.standing?.let { standing ->
-                    SectionHeader("Saison ${state.season}")
+                    SectionHeader(strings.seasonHeader(state.season))
                     Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        StatTile("Position", "P${standing.position}", teamColor, Modifier.weight(1f))
-                        StatTile("Points", standing.points.formatPoints(), teamColor, Modifier.weight(1f))
-                        StatTile("Victoires", standing.wins.toString(), teamColor, Modifier.weight(1f))
+                        StatTile(strings.statPosition, "P${standing.position}", teamColor, Modifier.weight(1f))
+                        StatTile(strings.statPoints, standing.points.formatPoints(), teamColor, Modifier.weight(1f))
+                        StatTile(strings.statWins, standing.wins.toString(), teamColor, Modifier.weight(1f))
                     }
                 }
 
                 if (state.titles.count > 0) {
-                    SectionHeader("Titres mondiaux")
+                    SectionHeader(strings.worldTitles)
                     TitlesRow(state.titles)
                 }
 
-                SectionHeader("Carrière")
+                SectionHeader(strings.career)
                 val stats = profile.stats
                 Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        StatTile("Saisons", stats.seasons.toString(), MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
-                        StatTile("Courses", stats.races.toString(), MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
-                        StatTile("Pole positions", stats.poles.toString(), ApexColors.PurpleSector, Modifier.weight(1f))
+                        StatTile(strings.statSeasons, stats.seasons.toString(), MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
+                        StatTile(strings.statRaces, stats.races.toString(), MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
+                        StatTile(strings.statPoles, stats.poles.toString(), ApexColors.PurpleSector, Modifier.weight(1f))
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        StatTile("Victoires", stats.wins.toString(), ApexColors.Gold, Modifier.weight(1f))
-                        StatTile("Podiums", stats.podiums.toString(), ApexColors.Silver, Modifier.weight(1f))
+                        StatTile(strings.statWins, stats.wins.toString(), ApexColors.Gold, Modifier.weight(1f))
+                        StatTile(strings.statPodiums, stats.podiums.toString(), ApexColors.Silver, Modifier.weight(1f))
                         val rate = if (stats.races > 0) stats.wins * 100 / stats.races else 0
-                        StatTile("% victoires", "$rate%", ApexColors.GreenSector, Modifier.weight(1f))
+                        StatTile(strings.statWinRate, "$rate%", ApexColors.GreenSector, Modifier.weight(1f))
                     }
                 }
                 profile.driver.dateOfBirth?.let {
                     Text(
-                        "Né le ${it.longDay()} ${it.year}",
+                        strings.born(it.fullDate()),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(16.dp),
