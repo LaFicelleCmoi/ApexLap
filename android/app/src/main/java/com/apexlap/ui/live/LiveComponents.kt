@@ -1,5 +1,7 @@
 package com.apexlap.ui.live
 
+import com.apexlap.i18n.Strings
+import com.apexlap.i18n.LocalStrings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -51,7 +53,7 @@ fun TrackStatusPill(status: TrackStatus, modifier: Modifier = Modifier) {
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
-        Text(status.label.uppercase(), style = MaterialTheme.typography.labelSmall)
+        Text(LocalStrings.current.trackStatus(status).uppercase(), style = MaterialTheme.typography.labelSmall)
     }
 }
 
@@ -89,8 +91,8 @@ fun LiveDot(modifier: Modifier = Modifier) {
     Box(modifier.size(8.dp).background(StatusColors.Critical, CircleShape))
 }
 
-fun Gap?.display(): String = when (this) {
+fun Gap?.display(strings: Strings): String = when (this) {
     null -> "—"
-    is Gap.Seconds -> if (value == 0.0) "Leader" else "+" + String.format(java.util.Locale.US, "%.3f", value)
-    is Gap.Text -> value.replace("LAPS", "tours").replace("LAP", "tour")
+    is Gap.Seconds -> if (value == 0.0) strings.leaderGap else "+" + String.format(java.util.Locale.US, "%.3f", value)
+    is Gap.Text -> value.replace("LAPS", strings.lapsWord).replace("LAP", strings.lapWord)
 }
