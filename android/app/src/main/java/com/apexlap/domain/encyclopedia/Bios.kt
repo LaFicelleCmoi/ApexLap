@@ -4,14 +4,10 @@ import com.apexlap.domain.model.ConstructorProfile
 import com.apexlap.domain.model.ConstructorStanding
 import com.apexlap.domain.model.DriverProfile
 import com.apexlap.domain.model.DriverStanding
+import com.apexlap.i18n.AppLanguage
 import java.time.LocalDate
 import java.time.Period
 import java.time.format.DateTimeFormatter
-import java.util.Locale
-
-private val birthFormatter = DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.FRENCH)
-
-private fun plural(count: Int, word: String, plural: String = word + "s") = "$count ${if (count > 1) plural else word}"
 
 /** "2008, 2014–2020": consecutive seasons collapsed into ranges. */
 fun formatSeasons(seasons: List<Int>): String {
@@ -24,48 +20,97 @@ fun formatSeasons(seasons: List<Int>): String {
     return ranges.joinToString(", ") { if (it.first == it.last) "${it.first}" else "${it.first}–${it.last}" }
 }
 
+private fun Double.points(): String = if (this % 1.0 == 0.0) toLong().toString() else toString()
+
 /** Short biography generated from the data we already have (no external text source). */
-fun driverBio(profile: DriverProfile, titles: Titles, standing: DriverStanding?, season: Int, today: LocalDate): String {
+fun driverBio(
+    profile: DriverProfile,
+    titles: Titles,
+    standing: DriverStanding?,
+    season: Int,
+    today: LocalDate,
+    language: AppLanguage,
+): String {
+    val w = Words(language)
     val driver = profile.driver
     val stats = profile.stats
     val sentences = mutableListOf<String>()
     sentences += driver.dateOfBirth?.let { birth ->
-        "${driver.fullName}, né le ${birthFormatter.format(birth)} (${Period.between(birth, today).years} ans)."
+        val date = DateTimeFormatter.ofPattern(w.t("d MMMM yyyy", "d MMMM yyyy", "d 'de' MMMM 'de' yyyy"), language.locale).format(birth)
+        val age = Period.between(birth, today).years
+        w.t("${driver.fullName}, né le $date ($age ans).", "${driver.fullName}, born $date ($age years old).", "${driver.fullName}, nacido el $date ($age años).")
     } ?: "${driver.fullName}."
     if (titles.count > 0) {
-        sentences += (if (titles.count == 1) "Champion du monde" else "${titles.count} fois champion du monde") +
-            " (${formatSeasons(titles.seasons)})."
+        val seasons = formatSeasons(titles.seasons)
+        sentences += if (titles.count == 1) {
+            w.t("Champion du monde ($seasons).", "World champion ($seasons).", "Campeón del mundo ($seasons).")
+        } else {
+            w.t("${titles.count} fois champion du monde ($seasons).", "${titles.count}-time world champion ($seasons).", "${titles.count} veces campeón del mundo ($seasons).")
+        }
     }
     if (stats.races > 0) {
         val achievements = listOfNotNull(
-            plural(stats.wins, "victoire").takeIf { stats.wins > 0 },
-            plural(stats.podiums, "podium").takeIf { stats.podiums > 0 },
-            plural(stats.poles, "pole position", "pole positions").takeIf { stats.poles > 0 },
+            w.count(stats.wins, w.t("victoire", "win", "victoria"), w.t("victoires", "wins", "victorias")).takeIf { stats.wins > 0 },
+            w.count(stats.podiums, w.t("podium", "podium", "podio"), w.t("podiums", "podiums", "podios")).takeIf { stats.podiums > 0 },
+            w.count(stats.poles, "pole position", w.t("pole positions", "pole positions", "poles")).takeIf { stats.poles > 0 },
         )
-        sentences += "${plural(stats.races, "Grand Prix", "Grands Prix")} en ${plural(stats.seasons, "saison")}" +
-            (if (achievements.isEmpty()) "." else " : ${achievements.joinToString(", ")}.")
+        val races = w.count(stats.races, w.t("Grand Prix", "Grand Prix", "Gran Premio"), w.t("Grands Prix", "Grands Prix", "Grandes Premios"))
+        val seasons = w.count(stats.seasons, w.t("saison", "season", "temporada"), w.t("saisons", "seasons", "temporadas"))
+        sentences += w.t("$races en $seasons", "$races over $seasons", "$races en $seasons") +
+            (if (achievements.isEmpty()) "." else w.t(" : ", ": ", ": ") + achievements.joinToString(", ") + ".")
     }
     standing?.let { s ->
-        val team = s.constructor?.name?.let { " chez $it" }.orEmpty()
-        val number = driver.number?.let { ", numéro $it" }.orEmpty()
-        sentences += "En $season, il court$team$number et occupe la ${s.position}e place du championnat."
+        val team = s.constructor?.name
+        val number = driver.number
+        sentences += when (language) {
+            AppLanguage.FR -> "En $season, il court" + (team?.let { " chez $it" } ?: "") + (number?.let { ", numéro $it" } ?: "") +
+                " et occupe la ${s.position}e place du championnat."
+            AppLanguage.EN -> "In $season, he races" + (team?.let { " for $it" } ?: "") + (number?.let { " with number $it" } ?: "") +
+                " and is P${s.position} in the championship."
+            AppLanguage.ES -> "En $season corre" + (team?.let { " con $it" } ?: "") + (number?.let { " con el número $it" } ?: "") +
+                " y ocupa el ${s.position}.º puesto del campeonato."
+        }
     }
     return sentences.joinToString(" ")
 }
 
-fun constructorBio(profile: ConstructorProfile, titles: Titles, standing: ConstructorStanding?, season: Int): String {
+fun constructorBio(profile: ConstructorProfile, titles: Titles, standing: ConstructorStanding?, season: Int, language: AppLanguage): String {
+    val w = Words(language)
+    val name = profile.constructor.name
     val stats = profile.stats
     val sentences = mutableListOf<String>()
     sentences += if (stats.seasons > 0) {
-        "${profile.constructor.name} compte ${plural(stats.seasons, "saison")} en Formule 1" +
-            (if (stats.wins > 0) " et ${plural(stats.wins, "victoire")} en Grand Prix." else ".")
+        val seasons = w.count(stats.seasons, w.t("saison", "season", "temporada"), w.t("saisons", "seasons", "temporadas"))
+        val wins = w.count(stats.wins, w.t("victoire", "win", "victoria"), w.t("victoires", "wins", "victorias"))
+        w.t("$name compte $seasons en Formule 1", "$name has raced $seasons in Formula 1", "$name suma $seasons en la Fórmula 1") +
+            if (stats.wins > 0) w.t(" et $wins en Grand Prix.", " with $wins in Grands Prix.", " y $wins en Grandes Premios.") else "."
     } else {
-        "${profile.constructor.name}."
+        "$name."
     }
     if (titles.count > 0) {
-        sentences += (if (titles.count == 1) "Championne du monde des constructeurs" else "${titles.count} titres constructeurs") +
-            " (${formatSeasons(titles.seasons)})."
+        val seasons = formatSeasons(titles.seasons)
+        sentences += if (titles.count == 1) {
+            w.t("Championne du monde des constructeurs ($seasons).", "Constructors' world champion ($seasons).", "Campeona del mundo de constructores ($seasons).")
+        } else {
+            w.t("${titles.count} titres constructeurs ($seasons).", "${titles.count} constructors' titles ($seasons).", "${titles.count} títulos de constructores ($seasons).")
+        }
     }
-    standing?.let { sentences += "En $season, l'écurie est ${it.position}e du championnat avec ${it.points.let { p -> if (p % 1.0 == 0.0) p.toLong().toString() else p.toString() }} points." }
+    standing?.let {
+        sentences += w.t(
+            "En $season, l'écurie est ${it.position}e du championnat avec ${it.points.points()} points.",
+            "In $season, the team is P${it.position} in the championship with ${it.points.points()} points.",
+            "En $season, la escudería es ${it.position}.ª del campeonato con ${it.points.points()} puntos.",
+        )
+    }
     return sentences.joinToString(" ")
+}
+
+private class Words(private val language: AppLanguage) {
+    fun t(fr: String, en: String, es: String) = when (language) {
+        AppLanguage.FR -> fr
+        AppLanguage.EN -> en
+        AppLanguage.ES -> es
+    }
+
+    fun count(n: Int, one: String, many: String) = "$n ${if (n > 1) many else one}"
 }
