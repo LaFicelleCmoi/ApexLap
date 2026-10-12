@@ -1,5 +1,6 @@
 package com.apexlap.widget
 
+import com.apexlap.i18n.I18n
 import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -76,12 +77,12 @@ private fun WidgetContent(next: UpcomingSession?, now: Instant, hasCalendar: Boo
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(GlanceModifier.width(4.dp).height(12.dp).background(RacingRed)) {}
                 Spacer(GlanceModifier.width(6.dp))
-                Text("PROCHAINE SÉANCE", style = TextStyle(color = ColorProvider(Floodlight), fontSize = 11.sp, fontWeight = FontWeight.Bold))
+                Text(I18n.strings.nextSession, style = TextStyle(color = ColorProvider(Floodlight), fontSize = 11.sp, fontWeight = FontWeight.Bold))
             }
             Spacer(GlanceModifier.height(6.dp))
             if (next == null) {
                 Text(
-                    if (hasCalendar) "Saison terminée" else "Ouvrez Apex Lap pour charger le calendrier",
+                    if (hasCalendar) I18n.strings.seasonOver else I18n.strings.openAppToLoad,
                     style = TextStyle(color = ColorProvider(Telemetry), fontSize = 13.sp),
                 )
             } else {
@@ -92,7 +93,7 @@ private fun WidgetContent(next: UpcomingSession?, now: Instant, hasCalendar: Boo
                     maxLines = 1,
                 )
                 Text(
-                    "${next.session.type.label} · ${start.localDay()} ${start.localTime()}",
+                    "${I18n.strings.session(next.session.type)} · ${start.localDay()} ${start.localTime()}",
                     style = TextStyle(color = ColorProvider(Telemetry), fontSize = 13.sp),
                     maxLines = 1,
                 )
