@@ -1,4 +1,4 @@
 <resources>
-    <string name="app_name">Apex Lap</string>
-    <string name="widget_description">Prochaine séance de F1 et compte à rebours</string>
+    <string name="app_name" translatable="false">Apex Lap</string>
+    <string name="widget_description">Next F1 session and countdown</string>
 </resources>
