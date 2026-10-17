@@ -1,3 +1,4 @@
+import ApexLapDomain
 import Foundation
 
 public struct LiveSession: Hashable, Sendable, Identifiable {
@@ -25,17 +26,8 @@ public struct LiveSession: Hashable, Sendable, Identifiable {
         self.country = country
     }
 
-    public var frenchName: String {
-        switch name {
-        case "Race": "Course"
-        case "Qualifying": "Qualifications"
-        case "Sprint Qualifying", "Sprint Shootout": "Qualifs sprint"
-        case "Practice 1": "EL1"
-        case "Practice 2": "EL2"
-        case "Practice 3": "EL3"
-        default: name
-        }
-    }
+    /// Session name in the app language ("Race" → "Course" / "Race" / "Carrera").
+    public func localizedName(_ strings: Strings) -> String { strings.openF1Session(name) }
 }
 
 public struct LiveDriver: Hashable, Sendable, Identifiable {
@@ -93,14 +85,14 @@ public struct Stint: Hashable, Sendable {
 public enum TrackStatus: String, Sendable {
     case green, yellow, vsc, safetyCar, red, chequered
 
-    public var label: String {
+    public func label(_ language: AppLanguage) -> String {
         switch self {
-        case .green: "Piste dégagée"
-        case .yellow: "Drapeau jaune"
+        case .green: L("Piste dégagée", "Track clear", "Pista despejada")[language]
+        case .yellow: L("Drapeau jaune", "Yellow flag", "Bandera amarilla")[language]
         case .vsc: "Virtual Safety Car"
         case .safetyCar: "Safety Car"
-        case .red: "Drapeau rouge"
-        case .chequered: "Drapeau à damier"
+        case .red: L("Drapeau rouge", "Red flag", "Bandera roja")[language]
+        case .chequered: L("Drapeau à damier", "Chequered flag", "Bandera a cuadros")[language]
         }
     }
 }
@@ -109,10 +101,10 @@ public enum Gap: Hashable, Sendable {
     case seconds(Double)
     case text(String)
 
-    public var display: String {
+    public func display(_ strings: Strings) -> String {
         switch self {
-        case let .seconds(value): value == 0 ? "Leader" : String(format: "+%.3f", value)
-        case let .text(value): value.replacingOccurrences(of: "LAPS", with: "tours").replacingOccurrences(of: "LAP", with: "tour")
+        case let .seconds(value): value == 0 ? strings.leaderGap : String(format: "+%.3f", value)
+        case let .text(value): value.replacingOccurrences(of: "LAPS", with: strings.lapsWord).replacingOccurrences(of: "LAP", with: strings.lapWord)
         }
     }
 }
