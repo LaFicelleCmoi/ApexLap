@@ -1,4 +1,5 @@
 import ApexLapData
+import ApexLapDomain
 import Foundation
 import Observation
 
@@ -33,10 +34,11 @@ final class OfflineFirst<Value> {
     }
 
     static func message(for error: Error) -> String {
+        let strings = I18n.strings
         switch error {
-        case NetworkError.offline: "Hors ligne — affichage des données en cache"
-        case let NetworkError.http(status): "Serveur indisponible (HTTP \(status))"
-        default: "Impossible de charger les données"
+        case NetworkError.offline: return strings.offlineCached
+        case let NetworkError.http(status): return strings.serverDown(status)
+        default: return strings.loadFailed
         }
     }
 }
