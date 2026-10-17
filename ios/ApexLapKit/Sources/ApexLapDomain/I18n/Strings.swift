@@ -293,6 +293,8 @@ public struct Strings: Sendable {
           "Replaying past sessions is free. Live data during sessions needs an OpenF1 sponsor account; the password is stored in the iOS keychain.",
           "La repetición de sesiones pasadas es gratuita. El directo durante las sesiones requiere una cuenta de patrocinador de OpenF1; la contraseña se guarda en el llavero de iOS.")
     }
+    public var goLive: String { t("Passer en direct", "Go live", "Pasar al directo") }
+    public var becomeSponsor: String { t("Devenir sponsor OpenF1", "Become an OpenF1 sponsor", "Hazte patrocinador de OpenF1") }
     public var email: String { t("E-mail", "Email", "Correo") }
     public var password: String { t("Mot de passe", "Password", "Contraseña") }
     public var signOut: String { t("Se déconnecter", "Sign out", "Cerrar sesión") }
@@ -313,6 +315,16 @@ public struct Strings: Sendable {
         t("Distance intégrée depuis la vitesse (OpenF1 ne fournit pas de canal distance) : positions précises à quelques mètres près.",
           "Distance integrated from speed (OpenF1 has no distance channel): positions are accurate to a few metres.",
           "Distancia integrada a partir de la velocidad (OpenF1 no ofrece canal de distancia): posiciones precisas a unos metros.")
+    }
+    public var chartTouchHint: String {
+        t("Touchez ou glissez sur un graphique pour lire les valeurs à un point du tour.",
+          "Tap or drag on a chart to read the values at any point of the lap.",
+          "Toca o desliza sobre un gráfico para leer los valores en un punto de la vuelta.")
+    }
+    public var trackMapDescription: String {
+        t("Carte du circuit colorée par pilote le plus rapide par mini-secteur",
+          "Track map coloured by the fastest driver in each mini-sector",
+          "Mapa del circuito coloreado según el piloto más rápido en cada minisector")
     }
     public var lapColumn: String { t("TOUR", "LAP", "VUELTA") }
     public func lapOption(_ n: Int, _ time: String, best: Bool) -> String {
