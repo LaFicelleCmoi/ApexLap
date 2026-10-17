@@ -81,7 +81,9 @@ struct SeasonAndRemindersTests {
         #expect(plan.last?.fireAt == f.date(from: "2026-10-25T18:45:00Z"))
         #expect(ReminderPlanner.plan([austin], now: f.date(from: "2026-10-25T18:50:00Z")!, settings: ReminderSettings(enabled: true, scope: .racesOnly)).isEmpty)
         #expect(ReminderPlanner.plan([austin], now: now, settings: ReminderSettings()).isEmpty)
-        #expect(ReminderPlanner.relativeStart(from: now, to: now.addingTimeInterval(2 * 86400 + 4 * 3600 + 59)) == "dans 2 j 4 h")
-        #expect(ReminderPlanner.relativeStart(from: now, to: now.addingTimeInterval(3 * 3600 + 5 * 60)) == "dans 3 h 05")
+        #expect(ReminderPlanner.relativeStart(from: now, to: now.addingTimeInterval(2 * 86400 + 4 * 3600 + 59), strings: Strings(.fr)) == "dans 2 j 4 h")
+        #expect(ReminderPlanner.relativeStart(from: now, to: now.addingTimeInterval(3 * 3600 + 5 * 60), strings: Strings(.fr)) == "dans 3 h 05")
+        #expect(ReminderPlanner.relativeStart(from: now, to: now.addingTimeInterval(45 * 60), strings: Strings(.en)) == "in 45 min")
+        #expect(ReminderPlanner.relativeStart(from: now, to: now.addingTimeInterval(2 * 86400), strings: Strings(.es)) == "en 2 d")
     }
 }
