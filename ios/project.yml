@@ -8,8 +8,8 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.10"
-    MARKETING_VERSION: "1.0.0"
-    CURRENT_PROJECT_VERSION: "1"
+    MARKETING_VERSION: "1.7.0"
+    CURRENT_PROJECT_VERSION: "9"
     DEVELOPMENT_TEAM: ""
 packages:
   ApexLapKit:
@@ -38,6 +38,13 @@ targets:
           UIColorName: AccentColor
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIUserInterfaceStyle: Dark
+        # The widget opens a Grand Prix with apexlap://race/<season>/<round>.
+        CFBundleURLTypes:
+          - CFBundleURLName: com.apexlap.ios
+            CFBundleURLSchemes: [apexlap]
+        # Languages the app is translated into (texts live in ApexLapDomain's Strings).
+        CFBundleLocalizations: [fr, en, es]
+        CFBundleDevelopmentRegion: en
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.apexlap.ios
@@ -50,6 +57,9 @@ targets:
     platform: iOS
     sources:
       - ApexLapWidget
+      # Same colours and formatting as the app.
+      - ApexLap/Design/Theme.swift
+      - ApexLap/Design/Formatting.swift
     dependencies:
       - package: ApexLapKit
         product: ApexLapDomain
