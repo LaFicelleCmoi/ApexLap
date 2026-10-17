@@ -53,9 +53,10 @@ final class ReminderScheduler {
         center.removePendingNotificationRequests(withIdentifiers: pending.filter { !keep.contains($0) })
         for reminder in planned {
             guard let start = reminder.session.startsAt else { continue }
+            let strings = I18n.strings
             let content = UNMutableNotificationContent()
-            content.title = "\(Format.flag(reminder.race.circuit.country)) \(reminder.session.type.label) · \(reminder.race.name)"
-            content.body = "Départ à \(Format.time(start)) — dans \(settings.leadMinutes) min"
+            content.title = "\(Format.flag(reminder.race.circuit.country)) \(strings.session(reminder.session.type)) · \(reminder.race.name)"
+            content.body = strings.notificationBody(Format.time(start), settings.leadMinutes)
             content.sound = .default
             content.userInfo = ["season": reminder.race.season, "round": reminder.race.round]
             let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, reminder.fireAt.timeIntervalSinceNow), repeats: false)
