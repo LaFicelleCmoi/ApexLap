@@ -1,27 +1,36 @@
+import ApexLapDomain
 import Foundation
 
 enum Format {
-    private static let french = Locale(identifier: "fr_FR")
+    /// Dates follow the app language (read at call time, so a language change applies on the next draw).
+    private static var locale: Locale { I18n.language.locale }
 
     static func day(_ date: Date) -> String {
-        date.formatted(.dateTime.locale(french).weekday(.abbreviated).day().month(.abbreviated)).capitalized
+        date.formatted(.dateTime.locale(locale).weekday(.abbreviated).day().month(.abbreviated)).capitalized
     }
 
     /// Session days are stored as midnight UTC, so they must be formatted in UTC.
     static func utcDay(_ date: Date) -> String {
-        var style = Date.FormatStyle.dateTime.locale(french).weekday(.abbreviated).day().month(.abbreviated)
+        var style = Date.FormatStyle.dateTime.locale(locale).weekday(.abbreviated).day().month(.abbreviated)
         style.timeZone = TimeZone(identifier: "UTC")!
         return date.formatted(style).capitalized
     }
 
     static func shortUTCDay(_ date: Date) -> String {
-        var style = Date.FormatStyle.dateTime.locale(french).day().month(.abbreviated)
+        var style = Date.FormatStyle.dateTime.locale(locale).day().month(.abbreviated)
         style.timeZone = TimeZone(identifier: "UTC")!
         return date.formatted(style)
     }
 
     static func time(_ date: Date) -> String {
-        date.formatted(.dateTime.locale(french).hour(.twoDigits(amPM: .omitted)).minute(.twoDigits))
+        date.formatted(.dateTime.locale(locale).hour(.twoDigits(amPM: .omitted)).minute(.twoDigits))
+    }
+
+    /// Birth dates and other full dates, stored as midnight UTC.
+    static func fullUTCDate(_ date: Date) -> String {
+        var style = Date.FormatStyle.dateTime.locale(locale).day().month(.wide).year()
+        style.timeZone = TimeZone(identifier: "UTC")!
+        return date.formatted(style)
     }
 
     static func points(_ value: Double) -> String {
