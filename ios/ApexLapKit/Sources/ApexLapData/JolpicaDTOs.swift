@@ -38,8 +38,9 @@ struct StandingsListDTO: Decodable {
 }
 
 struct DriverTableData: Decodable {
+    let total: String?
     let driverTable: DriverTableDTO
-    enum CodingKeys: String, CodingKey { case driverTable = "DriverTable" }
+    enum CodingKeys: String, CodingKey { case total, driverTable = "DriverTable" }
 }
 
 struct DriverTableDTO: Decodable {
@@ -48,8 +49,20 @@ struct DriverTableDTO: Decodable {
 }
 
 struct ConstructorTableData: Decodable {
+    let total: String?
     let constructorTable: ConstructorTableDTO
-    enum CodingKeys: String, CodingKey { case constructorTable = "ConstructorTable" }
+    enum CodingKeys: String, CodingKey { case total, constructorTable = "ConstructorTable" }
+}
+
+struct CircuitTableData: Decodable {
+    let total: String?
+    let circuitTable: CircuitTableDTO
+    enum CodingKeys: String, CodingKey { case total, circuitTable = "CircuitTable" }
+}
+
+struct CircuitTableDTO: Decodable {
+    let circuits: [CircuitDTO]
+    enum CodingKeys: String, CodingKey { case circuits = "Circuits" }
 }
 
 struct ConstructorTableDTO: Decodable {
