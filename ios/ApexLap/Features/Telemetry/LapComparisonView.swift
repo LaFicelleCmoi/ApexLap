@@ -65,7 +65,7 @@ final class LapComparisonViewModel {
         guard let a = try await repository.trace(session: session.key, lap: lapA),
               let b = try await repository.trace(session: session.key, lap: lapB) else {
             comparison = nil
-            error = "Télémétrie indisponible pour ce tour"
+            error = I18n.strings.telemetryUnavailable
             return
         }
         comparison = Telemetry.compare(a, b)
@@ -83,6 +83,7 @@ final class LapComparisonViewModel {
 }
 
 struct LapComparisonView: View {
+    @Environment(\.strings) private var strings
     @State private var model: LapComparisonViewModel
     @State private var selectedDistance: Double?
     private let colors = [ChartPalette.colors[0], ChartPalette.colors[1]]
@@ -101,7 +102,7 @@ struct LapComparisonView: View {
             }
         }
         .background(ApexColor.asphalt)
-        .navigationTitle("Comparateur de tours")
+        .navigationTitle(strings.lapComparison)
         .navigationBarTitleDisplayMode(.inline)
         .task { await model.load() }
     }
@@ -113,13 +114,13 @@ struct LapComparisonView: View {
         VStack(spacing: 10) {
             Menu {
                 ForEach(model.sessions.prefix(40)) { session in
-                    Button("\(session.circuit) · \(session.frenchName) — \(Format.day(session.start))") {
+                    Button("\(session.circuit) · \(session.localizedName(strings)) — \(Format.day(session.start))") {
                         selectedDistance = nil
                         Task { await model.select(session: session) }
                     }
                 }
             } label: {
-                pickerLabel(model.session.map { "\($0.circuit) · \($0.frenchName) — \(Format.day($0.start))" } ?? "Séance", color: nil)
+                pickerLabel(model.session.map { "\($0.circuit) · \($0.localizedName(strings)) — \(Format.day($0.start))" } ?? strings.sessionLabel, color: nil)
             }
             HStack(spacing: 10) {
                 lapPicker(slot: 0, lap: model.lapA)
@@ -137,14 +138,14 @@ struct LapComparisonView: View {
                 ForEach(model.drivers) { d in
                     Button("\(d.acronym) — \(d.fullName)") { Task { await model.select(driver: d.number, slot: slot) } }
                 }
-            } label: { pickerLabel(driver.map { "\($0.acronym) · \($0.team)" } ?? "Pilote", color: colors[slot]) }
+            } label: { pickerLabel(driver.map { "\($0.acronym) · \($0.team)" } ?? strings.driver, color: colors[slot]) }
             Menu {
                 ForEach(driverLaps.prefix(30)) { l in
-                    Button("Tour \(l.lapNumber) · \(LapTimeFormat.string(l.duration))" + (l == driverLaps.first ? " (meilleur)" : "")) {
+                    Button(strings.lapOption(l.lapNumber, LapTimeFormat.string(l.duration), best: l == driverLaps.first)) {
                         Task { await model.select(lap: l, slot: slot) }
                     }
                 }
-            } label: { pickerLabel(lap.map { "T\($0.lapNumber) · \(LapTimeFormat.string($0.duration))" } ?? "Tour", color: colors[slot]) }
+            } label: { pickerLabel(lap.map { strings.lapShort($0.lapNumber) + " · \(LapTimeFormat.string($0.duration))" } ?? strings.lapLabel, color: colors[slot]) }
         }
     }
 
@@ -162,14 +163,14 @@ struct LapComparisonView: View {
 
     @ViewBuilder
     private func charts(_ c: LapComparison) -> some View {
-        SectionHeader(title: "Temps au tour")
+        SectionHeader(title: strings.lapTimes)
         sectorTable
 
-        SectionHeader(title: "Lecture")
+        SectionHeader(title: strings.readout)
         readout(c).padding(.horizontal, 16)
 
         Card {
-            Text("Vitesse (km/h)").font(.caption).foregroundStyle(ApexColor.telemetry)
+            Text(strings.speedChart).font(.caption).foregroundStyle(ApexColor.telemetry)
             trace(c, a: c.speedA, b: c.speedB, domain: 50...360, height: 170)
             HStack(spacing: 14) {
                 legendItem(codeA, colors[0])
@@ -179,7 +180,7 @@ struct LapComparisonView: View {
         .padding(.vertical, 6)
 
         Card {
-            Text("Écart cumulé (s) — au-dessus de 0 : \(codeA) devant").font(.caption).foregroundStyle(ApexColor.telemetry)
+            Text(strings.deltaChart(codeA)).font(.caption).foregroundStyle(ApexColor.telemetry)
             let bound = max(0.2, ((c.delta.map(abs).max() ?? 0) * 10).rounded(.up) / 10)
             Chart {
                 RuleMark(y: .value("Zéro", 0)).foregroundStyle(ApexColor.telemetry)
@@ -198,30 +199,30 @@ struct LapComparisonView: View {
         .padding(.vertical, 6)
 
         Card {
-            Text("Accélérateur (%)").font(.caption).foregroundStyle(ApexColor.telemetry)
+            Text(strings.throttleChart).font(.caption).foregroundStyle(ApexColor.telemetry)
             trace(c, a: c.throttleA, b: c.throttleB, domain: 0...100, height: 110)
         }
         .padding(.vertical, 6)
 
         Card {
-            Text("Freinage").font(.caption).foregroundStyle(ApexColor.telemetry)
+            Text(strings.brakeChart).font(.caption).foregroundStyle(ApexColor.telemetry)
             // B is drawn slightly lower so overlapping brake zones stay distinguishable.
             trace(c, a: c.brakeA, b: c.brakeB.map { $0 * 0.85 }, domain: 0...100, height: 80)
         }
         .padding(.vertical, 6)
 
-        SectionHeader(title: "Domination par mini-secteur")
+        SectionHeader(title: strings.miniSectors)
         Card {
             DominanceMap(points: model.track, winners: c.miniSectorWinners, colors: colors,
                          selectedFraction: selectedDistance.map { $0 / (c.distance.last ?? 1) })
                 .frame(height: 220)
             let winsA = c.miniSectorWinners.filter { $0 == 0 }.count
             HStack(spacing: 14) {
-                legendItem("\(codeA) · \(winsA) mini-secteurs", colors[0])
-                legendItem("\(codeB) · \(c.miniSectorWinners.count - winsA) mini-secteurs", colors[1])
+                legendItem(strings.miniSectorsWon(codeA, winsA), colors[0])
+                legendItem(strings.miniSectorsWon(codeB, c.miniSectorWinners.count - winsA), colors[1])
             }
         }
-        Text("Distance intégrée depuis la vitesse (OpenF1 ne fournit pas de canal distance) : positions précises à quelques mètres près.")
+        Text(strings.telemetryNote)
             .font(.caption).foregroundStyle(ApexColor.telemetry).padding(16)
     }
 
@@ -263,7 +264,7 @@ struct LapComparisonView: View {
                 Text(String(format: "Δ %+.3f s", c.delta[i])).font(.subheadline.monospacedDigit())
             }
         } else {
-            Text("Touchez ou glissez sur un graphique pour lire les valeurs à un point du tour.")
+            Text(strings.chartTouchHint)
                 .font(.caption).foregroundStyle(ApexColor.telemetry)
         }
     }
@@ -281,8 +282,8 @@ struct LapComparisonView: View {
         let timesA: [Double?] = a.sectors + [a.duration]
         let timesB: [Double?] = b.sectors + [b.duration]
         return [
-            SectorRow(label: "\(codeA) T\(a.lapNumber)", mine: timesA, other: timesB, color: colors[0]),
-            SectorRow(label: "\(codeB) T\(b.lapNumber)", mine: timesB, other: timesA, color: colors[1]),
+            SectorRow(label: "\(codeA) " + strings.lapShort(a.lapNumber), mine: timesA, other: timesB, color: colors[0]),
+            SectorRow(label: "\(codeB) " + strings.lapShort(b.lapNumber), mine: timesB, other: timesA, color: colors[1]),
         ]
     }
 
@@ -290,7 +291,7 @@ struct LapComparisonView: View {
         Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 6) {
             GridRow {
                 Text("")
-                ForEach(["S1", "S2", "S3", "TOUR"], id: \.self) { Text($0).font(ApexFont.label).foregroundStyle(ApexColor.telemetry) }
+                ForEach(["S1", "S2", "S3", strings.lapColumn], id: \.self) { Text($0).font(ApexFont.label).foregroundStyle(ApexColor.telemetry) }
             }
             ForEach(sectorRows) { row in
                 GridRow {
@@ -324,6 +325,7 @@ struct LapComparisonView: View {
 
 /// Track outline from driver A's location samples, coloured by who was quicker in each mini-sector.
 struct DominanceMap: View {
+    @Environment(\.strings) private var strings
     let points: [Telemetry.MappedPoint]
     let winners: [Int]
     let colors: [Color]
@@ -357,6 +359,6 @@ struct DominanceMap: View {
                 context.fill(Path(ellipseIn: CGRect(x: c.x - 5, y: c.y - 5, width: 10, height: 10)), with: .color(ApexColor.floodlight))
             }
         }
-        .accessibilityLabel("Carte du circuit colorée par pilote le plus rapide par mini-secteur")
+        .accessibilityLabel(strings.trackMapDescription)
     }
 }
