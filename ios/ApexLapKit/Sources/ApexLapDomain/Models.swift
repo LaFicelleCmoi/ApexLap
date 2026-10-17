@@ -1,31 +1,8 @@
 import Foundation
 
+/// Labels are localised by `Strings.session`.
 public enum SessionType: String, Codable, Sendable, CaseIterable {
     case practice1, practice2, practice3, sprintQualifying, sprint, qualifying, race
-
-    public var label: String {
-        switch self {
-        case .practice1: "Essais libres 1"
-        case .practice2: "Essais libres 2"
-        case .practice3: "Essais libres 3"
-        case .sprintQualifying: "Qualifications sprint"
-        case .sprint: "Sprint"
-        case .qualifying: "Qualifications"
-        case .race: "Course"
-        }
-    }
-
-    public var shortLabel: String {
-        switch self {
-        case .practice1: "EL1"
-        case .practice2: "EL2"
-        case .practice3: "EL3"
-        case .sprintQualifying: "SQ"
-        case .sprint: "SPR"
-        case .qualifying: "Q"
-        case .race: "GP"
-        }
-    }
 }
 
 public struct Session: Codable, Hashable, Sendable {
@@ -277,4 +254,13 @@ public struct QualifyingResult: Codable, Hashable, Sendable, Identifiable {
 extension RaceResult {
     /// Classified finishers have a numeric `positionText`; R/D/W/N/E/F mark retirements and exclusions.
     public var isClassified: Bool { !positionText.isEmpty && positionText.allSatisfy(\.isNumber) }
+
+    /// A retirement (DNF): not classified (R, N), or classified after covering 90 % of the distance but stopped
+    /// before the flag (status other than a finish). Non-starters (W), disqualifications (D) and exclusions (E, F) are not.
+    public var isRetirement: Bool {
+        if status.range(of: "not start", options: .caseInsensitive) != nil { return false }
+        if positionText == "R" || positionText == "N" { return true }
+        if isClassified { return !(status == "Finished" || status == "Lapped" || status.hasPrefix("+")) }
+        return false
+    }
 }
