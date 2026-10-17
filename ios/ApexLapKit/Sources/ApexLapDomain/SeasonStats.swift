@@ -17,19 +17,9 @@ public struct ChampionshipProgression: Hashable, Sendable {
     public let drivers: [DriverProgression]
 }
 
+/// Titles are localised by `Strings.leader`.
 public enum LeaderCategory: String, CaseIterable, Sendable {
     case wins, podiums, poles, fastestLaps, positionsGained, dnfs
-
-    public var title: String {
-        switch self {
-        case .wins: "Victoires"
-        case .podiums: "Podiums"
-        case .poles: "Poles"
-        case .fastestLaps: "Meilleurs tours"
-        case .positionsGained: "Places gagnées"
-        case .dnfs: "Abandons"
-        }
-    }
 }
 
 public struct LeaderEntry: Hashable, Sendable, Identifiable {
@@ -108,7 +98,7 @@ public enum SeasonStats {
         case .poles: rows.filter { $0.grid == 1 }.count
         case .fastestLaps: rows.filter(\.hasFastestLap).count
         case .positionsGained: rows.filter(\.isClassified).reduce(0) { $0 + ($1.positionsGained ?? 0) }
-        case .dnfs: rows.filter { !$0.isClassified }.count
+        case .dnfs: rows.filter(\.isRetirement).count
         }
     }
 
@@ -136,7 +126,7 @@ public enum SeasonStats {
                 poles: races.filter { $0.grid == 1 }.count,
                 bestFinish: classified.map(\.position).min(),
                 averageFinish: classified.isEmpty ? nil : Double(classified.reduce(0) { $0 + $1.position }) / Double(classified.count),
-                dnfs: races.filter { !$0.isClassified }.count,
+                dnfs: races.filter(\.isRetirement).count,
                 racesAhead: racesAhead,
                 startsAhead: startsAhead
             )
