@@ -1,7 +1,9 @@
+import ApexLapDomain
 import ApexLapLive
 import SwiftUI
 
 struct LiveView: View {
+    @Environment(\.strings) private var strings
     @State private var model = LiveViewModel()
     @State private var account = OpenF1Account.shared
     @State private var showAccount = false
@@ -15,7 +17,7 @@ struct LiveView: View {
                     Button {
                         if account.isSignedIn { model.goLive() } else { showAccount = true }
                     } label: {
-                        Label("Passer en direct", systemImage: "dot.radiowaves.left.and.right")
+                        Label(strings.goLive, systemImage: "dot.radiowaves.left.and.right")
                     }
                 }
             }
@@ -36,10 +38,10 @@ struct LiveView: View {
                     towerHeader(isRace: timing.session?.isRace == true)
                 }
                 if !timing.raceControl.isEmpty {
-                    Section("Direction de course") {
+                    Section(strings.raceControl) {
                         ForEach(timing.raceControl.prefix(8)) { entry in
                             HStack(alignment: .top) {
-                                Text(Format.time(entry.date) + (entry.lap.map { " · T\($0)" } ?? ""))
+                                Text(Format.time(entry.date) + (entry.lap.map { " · " + strings.lapShort($0) } ?? ""))
                                     .font(.caption2).foregroundStyle(ApexColor.telemetry).frame(width: 80, alignment: .leading)
                                 Text(entry.message).font(.caption)
                             }
@@ -53,7 +55,7 @@ struct LiveView: View {
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .background(ApexColor.asphalt)
-        .navigationTitle("Live timing")
+        .navigationTitle(strings.liveTiming)
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 NavigationLink(value: AppRoute.telemetry(sessionKey: model.session?.key)) {
@@ -61,7 +63,7 @@ struct LiveView: View {
                 }
                 Button { showAccount = true } label: {
                     Image(systemName: account.isSignedIn ? "person.crop.circle.fill" : "person.crop.circle")
-                        .accessibilityLabel("Compte OpenF1")
+                        .accessibilityLabel(strings.openF1Account)
                 }
             }
         }
@@ -74,12 +76,12 @@ struct LiveView: View {
     private var sessionMenu: some View {
         Menu {
             ForEach(model.sessions.prefix(40)) { session in
-                Button("\(session.circuit) · \(session.frenchName) — \(Format.day(session.start))") { Task { await model.select(session) } }
+                Button("\(session.circuit) · \(session.localizedName(strings)) — \(Format.day(session.start))") { Task { await model.select(session) } }
             }
         } label: {
             HStack {
                 VStack(alignment: .leading) {
-                    Text(model.session.map { "\($0.circuit) · \($0.frenchName)" } ?? "Choisir une séance").font(ApexFont.title)
+                    Text(model.session.map { "\($0.circuit) · \($0.localizedName(strings))" } ?? strings.chooseSession).font(ApexFont.title)
                     if let session = model.session { Text(Format.day(session.start)).font(.caption).foregroundStyle(ApexColor.telemetry) }
                 }
                 Spacer()
@@ -93,13 +95,13 @@ struct LiveView: View {
         HStack(spacing: 10) {
             if model.mode == .live {
                 Circle().fill(StatusColor.critical).frame(width: 8, height: 8)
-                Text("EN DIRECT").font(ApexFont.label)
+                Text(strings.onAir).font(ApexFont.label)
             } else {
-                Text("REPLAY").font(ApexFont.label).foregroundStyle(ApexColor.telemetry)
+                Text(strings.replay).font(ApexFont.label).foregroundStyle(ApexColor.telemetry)
             }
             TrackStatusPill(status: timing.trackStatus)
             Spacer()
-            if timing.session?.isRace == true, timing.leaderLap > 0 { Text("TOUR \(timing.leaderLap)").font(ApexFont.label) }
+            if timing.session?.isRace == true, timing.leaderLap > 0 { Text(strings.lap(timing.leaderLap)).font(ApexFont.label) }
         }
     }
 
@@ -110,26 +112,26 @@ struct LiveView: View {
                     Image(systemName: progress.playing ? "pause.fill" : "play.fill").frame(width: 28, height: 28)
                 }
                 .buttonStyle(.borderedProminent)
-                .accessibilityLabel(progress.playing ? "Pause" : "Lecture")
-                Picker("Vitesse", selection: Binding(get: { progress.speed }, set: { model.setSpeed($0) })) {
+                .accessibilityLabel(progress.playing ? strings.pause : strings.play)
+                Picker(strings.speed, selection: Binding(get: { progress.speed }, set: { model.setSpeed($0) })) {
                     ForEach(LiveViewModel.speeds, id: \.self) { Text("×\($0)").tag($0) }
                 }
                 .pickerStyle(.segmented)
             }
             Slider(value: Binding(get: { progress.fraction }, set: { model.seek(to: $0) }))
-            Text("\(Format.time(timing.clock ?? progress.current)) (heure locale)").font(.caption2).foregroundStyle(ApexColor.telemetry)
+            Text(Format.time(timing.clock ?? progress.current) + strings.localTimeSuffix).font(.caption2).foregroundStyle(ApexColor.telemetry)
         }
     }
 
     private func towerHeader(isRace: Bool) -> some View {
         HStack {
-            Text("POS").frame(width: 44, alignment: .leading)
-            Text("PILOTE")
+            Text(strings.colPos).frame(width: 44, alignment: .leading)
+            Text(strings.colDriver)
             Spacer()
-            Button(isRace ? (showGap ? "ÉCART ⇄" : "INTERVALLE ⇄") : "ÉCART") { showGap.toggle() }
+            Button(isRace ? (showGap ? strings.colGapSwitch : strings.colIntervalSwitch) : strings.colGap) { showGap.toggle() }
                 .disabled(!isRace).frame(width: 96, alignment: .leading)
-            Text("DERNIER").frame(width: 70, alignment: .leading)
-            Text("PNEU").frame(width: 40, alignment: .leading)
+            Text(strings.colLast).frame(width: 70, alignment: .leading)
+            Text(strings.colTyre).frame(width: 40, alignment: .leading)
         }
         .font(ApexFont.label)
         .foregroundStyle(ApexColor.telemetry)
@@ -139,7 +141,7 @@ struct LiveView: View {
         let teamColor = row.driver.teamColour.map { Color(hex: $0) } ?? ApexColor.telemetry
         let gap: String
         if timing.session?.isRace == true {
-            gap = (showGap ? row.gapToLeader : row.interval)?.display ?? "—"
+            gap = (showGap ? row.gapToLeader : row.interval)?.display(strings) ?? "—"
         } else if let best = row.bestLap {
             gap = leaderBest == nil || best == leaderBest ? LapTimeFormat.string(best) : String(format: "+%.3f", best - (leaderBest ?? best))
         } else {
@@ -151,7 +153,7 @@ struct LiveView: View {
             TeamStripe(color: teamColor, height: 22)
             VStack(alignment: .leading, spacing: 0) {
                 Text(row.driver.acronym).font(.subheadline.weight(.semibold))
-                if row.pitStops > 0 { Text("\(row.pitStops) arrêt\(row.pitStops > 1 ? "s" : "")").font(.caption2).foregroundStyle(ApexColor.telemetry) }
+                if row.pitStops > 0 { Text(strings.pitStops(row.pitStops)).font(.caption2).foregroundStyle(ApexColor.telemetry) }
             }
             Spacer()
             Text(gap).font(.caption.monospacedDigit()).frame(width: 96, alignment: .leading)
@@ -182,6 +184,7 @@ enum StatusColor {
 }
 
 struct TrackStatusPill: View {
+    @Environment(\.strings) private var strings
     let status: TrackStatus
 
     var body: some View {
@@ -191,7 +194,7 @@ struct TrackStatusPill: View {
         case .red: (StatusColor.critical, "xmark.octagon")
         case .chequered: (ApexColor.floodlight, "flag.checkered")
         }
-        Label(status.label.uppercased(), systemImage: icon)
+        Label(status.label(strings.language).uppercased(), systemImage: icon)
             .font(ApexFont.label)
             .foregroundStyle(ApexColor.floodlight)
             .labelStyle(PillLabelStyle(tint: color))
@@ -235,6 +238,7 @@ struct TyreBadge: View {
 }
 
 private struct AccountSheet: View {
+    @Environment(\.strings) private var strings
     let onSignedIn: () -> Void
     let onSignedOut: () -> Void
     @Environment(\.dismiss) private var dismiss
@@ -249,8 +253,8 @@ private struct AccountSheet: View {
             Form {
                 if let user = account.username {
                     Section {
-                        Text("Connecté : \(user)")
-                        Button("Se déconnecter", role: .destructive) {
+                        Text(strings.connectedAs(user))
+                        Button(strings.signOut, role: .destructive) {
                             Task {
                                 await account.signOut()
                                 onSignedOut()
@@ -258,14 +262,14 @@ private struct AccountSheet: View {
                             }
                         }
                     } footer: {
-                        Text("Le direct est disponible pendant les séances.")
+                        Text(strings.liveAvailableDuringSessions)
                     }
                 } else {
                     Section {
-                        TextField("E-mail", text: $username).textContentType(.username).keyboardType(.emailAddress).textInputAutocapitalization(.never)
-                        SecureField("Mot de passe", text: $password).textContentType(.password)
+                        TextField(strings.email, text: $username).textContentType(.username).keyboardType(.emailAddress).textInputAutocapitalization(.never)
+                        SecureField(strings.password, text: $password).textContentType(.password)
                         if let error { Text(error).font(.footnote).foregroundStyle(.red) }
-                        Button(busy ? "Connexion…" : "Se connecter") {
+                        Button(busy ? strings.signingIn : strings.signIn) {
                             busy = true
                             Task {
                                 do {
@@ -273,23 +277,23 @@ private struct AccountSheet: View {
                                     onSignedIn()
                                     dismiss()
                                 } catch {
-                                    self.error = "Identifiants OpenF1 incorrects ou serveur indisponible"
+                                    self.error = strings.openF1SignInFailed
                                 }
                                 busy = false
                             }
                         }
                         .disabled(busy || username.isEmpty || password.isEmpty)
                     } footer: {
-                        Text("Le replay des séances passées est gratuit. Le direct pendant les séances nécessite un compte sponsor OpenF1 ; le mot de passe est stocké dans le trousseau iOS.")
+                        Text(strings.openF1Explanation)
                     }
                     Section {
-                        Link("Devenir sponsor OpenF1", destination: URL(string: "https://openf1.org/#sponsor")!)
+                        Link(strings.becomeSponsor, destination: URL(string: "https://openf1.org/#sponsor")!)
                     }
                 }
             }
-            .navigationTitle("Compte OpenF1")
+            .navigationTitle(strings.openF1Account)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Fermer") { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button(strings.close) { dismiss() } } }
         }
         .presentationDetents([.medium, .large])
     }
