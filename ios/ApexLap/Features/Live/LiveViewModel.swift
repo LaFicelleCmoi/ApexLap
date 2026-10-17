@@ -125,7 +125,7 @@ final class LiveViewModel {
                 guard let self else { return }
                 do {
                     guard let token = try await self.account.tokens.token(), let username = self.account.username else {
-                        self.error = "Aucun compte OpenF1 configuré"
+                        self.error = I18n.strings.noOpenF1Account
                         self.isLoading = false
                         return
                     }
@@ -146,7 +146,7 @@ final class LiveViewModel {
                     self.isLoading = false
                     return
                 } catch {
-                    self.error = "Flux interrompu, reconnexion…"
+                    self.error = I18n.strings.streamInterrupted
                     self.isLoading = false
                 }
                 attempt += 1
