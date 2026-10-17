@@ -53,6 +53,7 @@ final class ResultsViewModel {
 
 struct ResultsView: View {
     @Environment(\.repository) private var repository
+    @Environment(\.strings) private var strings
     @State private var model = ResultsViewModel()
 
     var body: some View {
@@ -74,17 +75,18 @@ struct ResultsView: View {
         .overlay {
             if model.summaries.isEmpty {
                 if model.isRefreshing { ProgressView() } else {
-                    EmptyStateView(message: model.error ?? "Aucun Grand Prix terminé") { Task { await model.refresh(using: repository) } }
+                    EmptyStateView(message: model.error ?? strings.noFinishedGrandPrix(model.season)) { Task { await model.refresh(using: repository) } }
                 }
             }
         }
-        .navigationTitle("Résultats \(String(model.season))")
+        .navigationTitle(strings.resultsTitle(model.season))
         .refreshable { await model.refresh(using: repository) }
         .task { await model.load(using: repository) }
     }
 }
 
 private struct SummaryCard: View {
+    @Environment(\.strings) private var strings
     let summary: RaceSummary
 
     var body: some View {
@@ -93,7 +95,7 @@ private struct SummaryCard: View {
                 Text(Format.flag(summary.race.circuit.country)).font(.title2)
                 VStack(alignment: .leading) {
                     Text(summary.race.name).font(ApexFont.title)
-                    Text("MANCHE \(summary.race.round)").font(ApexFont.label).foregroundStyle(ApexColor.telemetry)
+                    Text(strings.round(summary.race.round)).font(ApexFont.label).foregroundStyle(ApexColor.telemetry)
                 }
             }
             ForEach(summary.podium) { result in
