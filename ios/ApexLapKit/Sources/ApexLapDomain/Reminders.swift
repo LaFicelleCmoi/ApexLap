@@ -1,15 +1,8 @@
 import Foundation
 
+/// Labels are localised by `Strings.reminderScope`.
 public enum ReminderScope: String, CaseIterable, Codable, Sendable {
     case allSessions, competitive, racesOnly
-
-    public var label: String {
-        switch self {
-        case .allSessions: "Toutes les séances"
-        case .competitive: "Qualifs, sprints et courses"
-        case .racesOnly: "Courses uniquement"
-        }
-    }
 
     public func includes(_ type: SessionType) -> Bool {
         switch self {
@@ -60,16 +53,8 @@ public enum ReminderPlanner {
         .sorted { $0.fireAt < $1.fireAt }
     }
 
-    /// "dans 2 j 4 h", "dans 3 h 05", "dans 45 min", "maintenant".
-    public static func relativeStart(from: Date, to: Date) -> String {
-        let minutes = Int(to.timeIntervalSince(from) / 60)
-        if minutes <= 0 { return "maintenant" }
-        if minutes < 60 { return "dans \(minutes) min" }
-        if minutes < 24 * 60 {
-            let rest = minutes % 60
-            return "dans \(minutes / 60) h" + (rest > 0 ? String(format: " %02d", rest) : "")
-        }
-        let hours = (minutes / 60) % 24
-        return "dans \(minutes / (24 * 60)) j" + (hours > 0 ? " \(hours) h" : "")
+    /// "dans 2 j 4 h", "in 3 h 05", "en 45 min", in the given language.
+    public static func relativeStart(from: Date, to: Date, strings: Strings = I18n.strings) -> String {
+        strings.relativeStart(minutes: Int(to.timeIntervalSince(from) / 60))
     }
 }
