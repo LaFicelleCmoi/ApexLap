@@ -75,14 +75,18 @@ public actor EncyclopediaRepository {
     public func circuitRecords(_ circuitId: String) async throws -> CircuitRecords {
         if let cached = circuitRecords[circuitId] { return cached }
         let laps = try await client.racesWithFirstResult("circuits/\(circuitId)/fastest/1/results")
-        let raceLap = laps.compactMap { row -> (Int, LapRecord)? in
-            guard let time = row.result.fastestLapTime, let ms = LapTime.milliseconds(time) else { return nil }
-            return (ms, LapRecord(time: time, season: row.race.season, driver: row.result.driver, constructor: row.result.constructor))
-        }.min { $0.0 < $1.0 }?.1
+        var raceLap: LapRecord?
+        var best = Int.max
+        for row in laps {
+            guard let time = row.result.fastestLapTime, let ms = LapTime.milliseconds(time), ms < best else { continue }
+            best = ms
+            raceLap = LapRecord(time: time, season: row.race.season, driver: row.result.driver, constructor: row.result.constructor)
+        }
         let poles = try await client.racesWithFirstResult("circuits/\(circuitId)/grid/1/results")
-        let poleSitters = Dictionary(grouping: poles, by: \.result.driver.id).values
-            .map { DriverCount(driver: $0[0].result.driver, count: $0.count) }
-            .sorted { $0.count != $1.count ? $0.count > $1.count : $0.driver.familyName < $1.driver.familyName }
+        let poleDrivers: [Driver] = poles.map { $0.result.driver }
+        let grouped: [String: [Driver]] = Dictionary(grouping: poleDrivers, by: { $0.id })
+        let counts: [DriverCount] = grouped.values.map { DriverCount(driver: $0[0], count: $0.count) }
+        let poleSitters = counts.sorted(by: Self.byCountThenName)
         let records = CircuitRecords(raceLap: raceLap, poleSitters: Array(poleSitters.prefix(3)))
         circuitRecords[circuitId] = records
         return records
@@ -95,6 +99,10 @@ public actor EncyclopediaRepository {
             .sorted { $0.race.round < $1.race.round }
         seasonWinners[season] = winners
         return winners
+    }
+
+    private static func byCountThenName(_ a: DriverCount, _ b: DriverCount) -> Bool {
+        a.count != b.count ? a.count > b.count : a.driver.familyName < b.driver.familyName
     }
 
     // MARK: Disk cache
