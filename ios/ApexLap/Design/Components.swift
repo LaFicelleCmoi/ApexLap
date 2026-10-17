@@ -1,3 +1,4 @@
+import ApexLapDomain
 import SwiftUI
 
 struct SectionHeader: View {
@@ -65,6 +66,7 @@ struct StatTile: View {
 
 /// Shown above cached content when the last refresh failed.
 struct OfflineBanner: View {
+    @Environment(\.strings) private var strings
     let message: String
     let retry: () -> Void
 
@@ -73,7 +75,7 @@ struct OfflineBanner: View {
             Image(systemName: "icloud.slash").foregroundStyle(ApexColor.telemetry)
             Text(message).font(.footnote)
             Spacer()
-            Button("Réessayer", action: retry).font(ApexFont.label)
+            Button(strings.retry, action: retry).font(ApexFont.label)
         }
         .padding(12)
         .background(ApexColor.carbonRaised, in: RoundedRectangle(cornerRadius: 12))
@@ -83,6 +85,7 @@ struct OfflineBanner: View {
 }
 
 struct EmptyStateView: View {
+    @Environment(\.strings) private var strings
     let message: String
     var retry: (() -> Void)?
 
@@ -91,7 +94,7 @@ struct EmptyStateView: View {
             Label(message, systemImage: "flag.checkered")
         } actions: {
             if let retry {
-                Button("Réessayer", action: retry).buttonStyle(.borderedProminent)
+                Button(strings.retry, action: retry).buttonStyle(.borderedProminent)
             }
         }
     }
@@ -131,5 +134,22 @@ struct HelmetView: View {
         }
         .frame(width: size, height: size)
         .accessibilityHidden(true)
+    }
+}
+
+/// World titles: count plus the seasons, most recent first.
+struct TitlesRow: View {
+    @Environment(\.strings) private var strings
+    let titles: Titles
+
+    var body: some View {
+        HStack(spacing: 12) {
+            StatTile(label: strings.titles(titles.count), value: "🏆 \(titles.count)", accent: ApexColor.gold)
+                .frame(width: 120)
+            Text(titles.seasons.sorted(by: >).map(String.init).joined(separator: " · "))
+                .font(.subheadline)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 16)
     }
 }
