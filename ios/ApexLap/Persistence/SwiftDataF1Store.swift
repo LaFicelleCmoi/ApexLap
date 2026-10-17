@@ -2,6 +2,7 @@ import ApexLapData
 import ApexLapDomain
 import Foundation
 import SwiftData
+import WidgetKit
 
 /// One cached API payload. Domain models are `Codable`, so a single key/value entity keeps the schema
 /// (and its migrations) trivial while still giving an indexed, persistent offline cache.
@@ -46,7 +47,8 @@ actor SwiftDataF1Store: F1LocalStore {
     func races(season: Int) -> [Race] { read([Race].self, key: "races-\(season)") ?? [] }
     func replaceRaces(_ races: [Race], season: Int) {
         write(races, key: "races-\(season)")
-        SharedCalendar.save(races)
+        // Only the season in progress feeds the widget (the encyclopedia also caches past seasons).
+        if season == CalendarLogic.currentSeason(now: .now) { SharedCalendar.save(races) }
     }
 
     func driverStandings(season: Int) -> [DriverStanding] {
@@ -60,6 +62,11 @@ actor SwiftDataF1Store: F1LocalStore {
     func replaceStandings(drivers: [DriverStanding], constructors: [ConstructorStanding], season: Int) {
         write(drivers, key: "driver-standings-\(season)")
         write(constructors, key: "constructor-standings-\(season)")
+        // The widget shows the followed driver and team's championship position.
+        if season == CalendarLogic.currentSeason(now: .now) {
+            SharedSettings.saveStandings(drivers: drivers, constructors: constructors)
+            WidgetCenter.shared.reloadAllTimelines()
+        }
     }
 
     func raceResults(season: Int, round: Int) -> [RaceResult] {
