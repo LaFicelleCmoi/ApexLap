@@ -13,7 +13,8 @@ let package = Package(
     ],
     targets: [
         .target(name: "ApexLapDomain"),
-        .target(name: "ApexLapData", dependencies: ["ApexLapDomain"]),
+        // Bundled world champions 1950–2025 (same file as the Android asset).
+        .target(name: "ApexLapData", dependencies: ["ApexLapDomain"], resources: [.copy("Resources/champions.json")]),
         .target(name: "ApexLapLive", dependencies: ["ApexLapData"]),
         .testTarget(
             name: "ApexLapKitTests",
