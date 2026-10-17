@@ -9,6 +9,10 @@ enum AppRoute: Hashable {
     case reminders
     /// An OpenF1 session key, or nil to start from the latest qualifying.
     case telemetry(sessionKey: Int?)
+    case settings
+    case encyclopedia
+    case season(Int)
+    case circuit(id: String)
 }
 
 extension View {
@@ -20,6 +24,10 @@ extension View {
             case let .constructor(id): ConstructorView(constructorId: id)
             case .reminders: RemindersView()
             case let .telemetry(sessionKey): LapComparisonView(sessionKey: sessionKey)
+            case .settings: SettingsView()
+            case .encyclopedia: EncyclopediaView()
+            case let .season(season): SeasonView(season: season)
+            case let .circuit(id): CircuitView(circuitId: id)
             }
         }
     }
