@@ -1,3 +1,4 @@
+import ApexLapData
 import ApexLapDomain
 import Foundation
 import Observation
@@ -18,6 +19,10 @@ final class RaceViewModel {
     private(set) var results = WeekendResults()
     private(set) var isRefreshing = false
     private(set) var error: String?
+    /// History of the circuit before this Grand Prix; nil while loading or offline.
+    private(set) var context: GrandPrixContext?
+
+    var facts: GrandPrixFacts { GrandPrixFacts(race: results.race, qualifying: results.qualifying) }
 
     init(season: Int, round: Int) {
         self.season = season
@@ -28,12 +33,21 @@ final class RaceViewModel {
 
     func load(using repository: any F1Repository) async {
         race = await repository.cachedCalendar(season: season).first { $0.round == round }
+        // Past seasons opened from the encyclopedia are not cached yet.
+        if race == nil {
+            race = try? await repository.refreshCalendar(season: season).first { $0.round == round }
+        }
         results = WeekendResults(
             race: await repository.cachedRaceResults(season: season, round: round),
             qualifying: await repository.cachedQualifying(season: season, round: round),
             sprint: await repository.cachedSprintResults(season: season, round: round)
         )
         await refresh(using: repository)
+    }
+
+    func loadContext(using encyclopedia: EncyclopediaRepository) async {
+        guard context == nil, let circuitId = race?.circuit.id else { return }
+        context = try? await encyclopedia.circuitHistory(circuitId).context(for: season)
     }
 
     /// Nothing to download before the first session of the weekend has started.
