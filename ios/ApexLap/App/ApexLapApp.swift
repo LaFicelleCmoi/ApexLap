@@ -26,12 +26,22 @@ struct ApexLapApp: App {
             RootView()
                 .environment(\.repository, repository)
                 .environment(AppRouter.shared)
+                .environment(SettingsStore.shared)
                 .preferredColorScheme(.dark)
                 .tint(ApexColor.racingRed)
+                // The widget opens a Grand Prix with apexlap://race/<season>/<round>.
+                .onOpenURL { url in
+                    guard url.scheme == "apexlap", url.host == "race" else { return }
+                    let parts = url.pathComponents.compactMap { Int($0) }
+                    if parts.count == 2 { AppRouter.shared.open(.race(season: parts[0], round: parts[1])) }
+                }
         }
         .modelContainer(container)
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { Task { await ReminderScheduler.shared.reschedule() } }
+            if phase == .active {
+                SettingsStore.shared.refreshSystemLanguage()
+                Task { await ReminderScheduler.shared.reschedule() }
+            }
         }
     }
 }
@@ -73,39 +83,43 @@ final class AppRouter {
 
 struct RootView: View {
     @Environment(AppRouter.self) private var router
+    @Environment(SettingsStore.self) private var settings
 
     var body: some View {
         @Bindable var router = router
+        // Every screen reads its texts from the environment, so picking a language redraws the app in place.
+        let strings = settings.strings
         TabView(selection: $router.tab) {
             NavigationStack(path: $router.calendarPath) {
                 CalendarView().withAppRoutes()
             }
-            .tabItem { Label("Calendrier", systemImage: "flag.checkered") }
+            .tabItem { Label(strings.navCalendar, systemImage: "flag.checkered") }
             .tag(AppTab.calendar)
 
             NavigationStack {
                 ResultsView().withAppRoutes()
             }
-            .tabItem { Label("Résultats", systemImage: "list.number") }
+            .tabItem { Label(strings.navResults, systemImage: "list.number") }
             .tag(AppTab.results)
 
             NavigationStack {
                 LiveView().withAppRoutes()
             }
-            .tabItem { Label("Live", systemImage: "dot.radiowaves.left.and.right") }
+            .tabItem { Label(strings.navLive, systemImage: "dot.radiowaves.left.and.right") }
             .tag(AppTab.live)
 
             NavigationStack {
                 StandingsView().withAppRoutes()
             }
-            .tabItem { Label("Classements", systemImage: "trophy") }
+            .tabItem { Label(strings.navStandings, systemImage: "trophy") }
             .tag(AppTab.standings)
 
             NavigationStack {
                 StatsView().withAppRoutes()
             }
-            .tabItem { Label("Stats", systemImage: "chart.xyaxis.line") }
+            .tabItem { Label(strings.navStats, systemImage: "chart.xyaxis.line") }
             .tag(AppTab.stats)
         }
+        .environment(\.strings, strings)
     }
 }
