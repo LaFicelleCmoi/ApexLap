@@ -1,3 +1,4 @@
+import ApexLapDomain
 import ApexLapLive
 import Foundation
 
@@ -5,7 +6,7 @@ enum LiveStreamError: LocalizedError {
     case refused(Int)
     var errorDescription: String? {
         switch self {
-        case let .refused(code): "Connexion OpenF1 refusée (code \(code))"
+        case let .refused(code): I18n.strings.openF1Refused(code)
         }
     }
 }
