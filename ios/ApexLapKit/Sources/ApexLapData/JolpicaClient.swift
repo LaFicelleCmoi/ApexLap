@@ -119,6 +119,52 @@ public struct JolpicaClient: Sendable {
         return constructor.toDomain()
     }
 
+    // MARK: Encyclopedia
+
+    /// All-time drivers (≈900) or constructors, walking the 100-row pages.
+    func allDrivers() async throws -> [Driver] {
+        try await paged { offset in
+            let page: JolpicaResponse<DriverTableData> = try await get("drivers.json", limit: 100, offset: offset)
+            return (page.data.driverTable.drivers.map { $0.toDomain() }, Int(page.data.total ?? "") ?? 0)
+        }
+    }
+
+    func allConstructors() async throws -> [Constructor] {
+        try await paged { offset in
+            let page: JolpicaResponse<ConstructorTableData> = try await get("constructors.json", limit: 100, offset: offset)
+            return (page.data.constructorTable.constructors.map { $0.toDomain() }, Int(page.data.total ?? "") ?? 0)
+        }
+    }
+
+    func allCircuits() async throws -> [Circuit] {
+        try await paged { offset in
+            let page: JolpicaResponse<CircuitTableData> = try await get("circuits.json", limit: 100, offset: offset)
+            return (page.data.circuitTable.circuits.map { $0.toDomain() }, Int(page.data.total ?? "") ?? 0)
+        }
+    }
+
+    /// Races of `path` (`circuits/{id}/results/1`, `{season}/results/1`…) with their single result row.
+    func racesWithFirstResult(_ path: String) async throws -> [(race: Race, result: RaceResult)] {
+        let response: JolpicaResponse<RaceTableData> = try await get("\(path).json", limit: 100)
+        return response.data.raceTable.races.compactMap { dto in
+            guard let result = dto.results?.first?.toDomain() else { return nil }
+            return (dto.toDomain(), result)
+        }
+    }
+
+    private func paged<T>(_ page: (Int) async throws -> ([T], Int)) async throws -> [T] {
+        var rows: [T] = []
+        var offset = 0
+        var total = 0
+        repeat {
+            let (items, count) = try await page(offset)
+            rows += items
+            total = count
+            offset += 100
+        } while offset < total
+        return rows
+    }
+
     /// Jolpica has no "career summary" endpoint, so statistics are derived from result counts.
     /// Poles are starts from grid slot 1 (the qualifying endpoint over-counts).
     /// For constructors, wins/podiums count car finishes (a 1-2 counts as one win and two podiums).
