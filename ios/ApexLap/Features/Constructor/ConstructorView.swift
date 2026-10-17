@@ -3,7 +3,11 @@ import SwiftUI
 
 struct ConstructorView: View {
     @Environment(\.repository) private var repository
+    @Environment(\.encyclopedia) private var encyclopedia
+    @Environment(\.strings) private var strings
+    @Environment(SettingsStore.self) private var store
     @State private var model: ConstructorViewModel
+    @State private var titles = Titles.none
 
     init(constructorId: String) {
         _model = State(initialValue: ConstructorViewModel(constructorId: constructorId))
@@ -16,15 +20,21 @@ struct ConstructorView: View {
             } else if model.profile.isRefreshing {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                EmptyStateView(message: model.profile.error ?? "Écurie introuvable") {
+                EmptyStateView(message: model.profile.error ?? strings.teamNotFound) {
                     Task { await model.refresh(using: repository) }
                 }
             }
         }
         .background(ApexColor.asphalt)
-        .navigationTitle(model.profile.value?.constructor.name ?? "Écurie")
+        .navigationTitle(model.profile.value?.constructor.name ?? strings.team)
         .navigationBarTitleDisplayMode(.inline)
-        .task { await model.load(using: repository) }
+        .toolbar {
+            FollowButton(isFollowed: store.settings.favoriteConstructorId == model.constructorId) { store.toggleConstructor(model.constructorId) }
+        }
+        .task {
+            titles = await encyclopedia.champions().constructorTitles(model.constructorId)
+            await model.load(using: repository)
+        }
     }
 
     private func content(_ profile: ConstructorProfile) -> some View {
@@ -50,25 +60,30 @@ struct ConstructorView: View {
                 )
                 .padding(16)
 
+                SectionHeader(title: strings.bio)
+                Text(Bios.constructor(profile, titles: titles, standing: model.standing, season: model.season, language: strings.language))
+                    .font(.subheadline)
+                    .padding(.horizontal, 16)
+
                 if let standing = model.standing {
-                    SectionHeader(title: "Saison \(model.season)")
+                    SectionHeader(title: strings.seasonHeader(model.season))
                     HStack(spacing: 12) {
-                        StatTile(label: "Position", value: "P\(standing.position)", accent: color)
-                        StatTile(label: "Points", value: Format.points(standing.points), accent: color)
-                        StatTile(label: "Victoires", value: "\(standing.wins)", accent: color)
+                        StatTile(label: strings.statPosition, value: "P\(standing.position)", accent: color)
+                        StatTile(label: strings.statPoints, value: Format.points(standing.points), accent: color)
+                        StatTile(label: strings.statWins, value: "\(standing.wins)", accent: color)
                     }
                     .padding(.horizontal, 16)
                 }
 
                 if !model.drivers.isEmpty {
-                    SectionHeader(title: "Pilotes")
+                    SectionHeader(title: strings.drivers)
                     ForEach(model.drivers) { driver in
                         NavigationLink(value: AppRoute.driver(id: driver.driver.id)) {
                             HStack(spacing: 12) {
                                 HelmetView(color: color, size: 44)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(driver.driver.fullName).font(ApexFont.title)
-                                    Text("P\(driver.position) · \(Format.points(driver.points)) pts")
+                                    Text("P\(driver.position) · \(Format.points(driver.points)) \(strings.pts)")
                                         .font(.caption).foregroundStyle(ApexColor.telemetry)
                                 }
                                 Spacer()
@@ -81,22 +96,27 @@ struct ConstructorView: View {
                     }
                 }
 
-                SectionHeader(title: "Historique")
+                if titles.count > 0 {
+                    SectionHeader(title: strings.constructorTitles)
+                    TitlesRow(titles: titles)
+                }
+
+                SectionHeader(title: strings.history)
                 Grid(horizontalSpacing: 12, verticalSpacing: 12) {
                     GridRow {
-                        StatTile(label: "Saisons", value: "\(stats.seasons)")
-                        StatTile(label: "Départs", value: "\(stats.races)")
-                        StatTile(label: "Poles", value: "\(stats.poles)", accent: ApexColor.purpleSector)
+                        StatTile(label: strings.statSeasons, value: "\(stats.seasons)")
+                        StatTile(label: strings.statStarts, value: "\(stats.races)")
+                        StatTile(label: strings.statPoles, value: "\(stats.poles)", accent: ApexColor.purpleSector)
                     }
                     GridRow {
-                        StatTile(label: "Victoires", value: "\(stats.wins)", accent: ApexColor.gold)
-                        StatTile(label: "Podiums", value: "\(stats.podiums)", accent: ApexColor.silver)
+                        StatTile(label: strings.statWins, value: "\(stats.wins)", accent: ApexColor.gold)
+                        StatTile(label: strings.statPodiums, value: "\(stats.podiums)", accent: ApexColor.silver)
                         Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
                     }
                 }
                 .padding(.horizontal, 16)
 
-                Text("Départs, victoires et podiums comptent chaque voiture classée.")
+                Text(strings.constructorStatsNote)
                     .font(.caption).foregroundStyle(ApexColor.telemetry).padding(16)
             }
         }
