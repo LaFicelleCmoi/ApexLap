@@ -58,6 +58,12 @@ extension SessionDTO {
     }
 }
 
+extension CircuitDTO {
+    func toDomain() -> Circuit {
+        Circuit(id: circuitId, name: circuitName, locality: location.locality, country: location.country)
+    }
+}
+
 extension DriverDTO {
     func toDomain() -> Driver {
         Driver(
