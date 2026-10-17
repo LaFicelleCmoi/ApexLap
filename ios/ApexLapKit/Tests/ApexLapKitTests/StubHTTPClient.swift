@@ -31,7 +31,9 @@ final class StubHTTPClient: HTTPClient, @unchecked Sendable {
         case "2026/17/results.json": return try fixture("results_singapore_2026")
         case "2026/17/qualifying.json": return try fixture("qualifying_singapore_2026")
         case "2026/17/sprint.json", "2026/sprint.json": return try asSprint(fixture("results_singapore_2026"))
-        case let circuit where circuit.hasPrefix("circuits/"), "2026/results/1.json":
+        case "2026/results/1.json":
+            return try fixture("results_singapore_2026")
+        case let circuit where circuit.hasPrefix("circuits/"):
             return try fixture("results_singapore_2026")
         case "2026/results.json":
             // Pretend there are 150 rows so the client walks two pages of the same fixture.
