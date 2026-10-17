@@ -44,6 +44,7 @@ final class StatsViewModel {
 
 struct StatsView: View {
     @Environment(\.repository) private var repository
+    @Environment(\.strings) private var strings
     @State private var model = StatsViewModel()
 
     var body: some View {
@@ -54,7 +55,7 @@ struct StatsView: View {
                 }
                 if model.results.isEmpty {
                     if model.isRefreshing { ProgressView().frame(maxWidth: .infinity).padding(40) } else {
-                        EmptyStateView(message: model.error ?? "Pas encore de course disputée") { Task { await model.refresh(using: repository) } }
+                        EmptyStateView(message: model.error ?? strings.noRaceYet) { Task { await model.refresh(using: repository) } }
                     }
                 } else {
                     content
@@ -62,7 +63,12 @@ struct StatsView: View {
             }
         }
         .background(ApexColor.asphalt)
-        .navigationTitle("Stats \(String(model.season))")
+        .navigationTitle(strings.statsTitle(model.season))
+        .toolbar {
+            NavigationLink(value: AppRoute.settings) {
+                Image(systemName: "gearshape").accessibilityLabel(strings.settings)
+            }
+        }
         .refreshable { await model.refresh(using: repository) }
         .task { await model.load(using: repository) }
     }
@@ -70,9 +76,9 @@ struct StatsView: View {
     @ViewBuilder
     private var content: some View {
         let progression = model.progression
-        SectionHeader(title: "Évolution du championnat")
+        SectionHeader(title: strings.championshipProgression)
         Card {
-            Text("Points cumulés des 5 premiers · touchez le graphique pour voir chaque manche")
+            Text(strings.cumulativePointsHint(5))
                 .font(.caption).foregroundStyle(ApexColor.telemetry)
             ProgressionChart(rounds: progression.rounds, drivers: Array(progression.drivers.prefix(5)))
         }
@@ -80,8 +86,8 @@ struct StatsView: View {
         NavigationLink(value: AppRoute.telemetry(sessionKey: nil)) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Comparateur de tours").font(ApexFont.title)
-                    Text("Télémétrie de deux pilotes : vitesse, gaz, freins, écart et carte du circuit.")
+                    Text(strings.lapComparison).font(ApexFont.title)
+                    Text(strings.lapComparisonHint)
                         .font(.caption).foregroundStyle(ApexColor.telemetry)
                 }
                 Spacer()
@@ -94,13 +100,29 @@ struct StatsView: View {
         }
         .buttonStyle(.plain)
 
-        SectionHeader(title: "Leaders de la saison")
+        NavigationLink(value: AppRoute.encyclopedia) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(strings.encyclopedia).font(ApexFont.title)
+                    Text(strings.encyclopediaHint).font(.caption).foregroundStyle(ApexColor.telemetry)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").foregroundStyle(ApexColor.telemetry)
+            }
+            .padding(16)
+            .background(ApexColor.carbonRaised, in: RoundedRectangle(cornerRadius: 16))
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+        }
+        .buttonStyle(.plain)
+
+        SectionHeader(title: strings.seasonLeaders)
         LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
             ForEach(model.leaders) { LeaderCard(board: $0) }
         }
         .padding(.horizontal, 16)
 
-        SectionHeader(title: "Duel")
+        SectionHeader(title: strings.duel)
         Card {
             HStack(spacing: 12) {
                 driverPicker(selection: Binding(get: { model.duel?.first.driver.id ?? "" }, set: { model.firstId = $0 }), color: ChartPalette.colors[0])
@@ -114,14 +136,19 @@ struct StatsView: View {
                     ProgressionChart(rounds: progression.rounds, drivers: pair, height: 180)
                 }
             } else {
-                Text("Choisissez deux pilotes différents.").font(.caption).foregroundStyle(ApexColor.telemetry)
+                Text(strings.pickTwoDrivers).font(.caption).foregroundStyle(ApexColor.telemetry)
             }
         }
-        .padding(.bottom, 24)
+
+        if let record = SeasonRetirementsRecord.of(model.season) {
+            SectionHeader(title: "\(strings.retirements) · \(record.total)")
+            Card { RetirementsTable(record: record, drivers: progression.drivers) }
+        }
+        Spacer().frame(height: 24)
     }
 
     private func driverPicker(selection: Binding<String>, color: Color) -> some View {
-        Picker("Pilote", selection: selection) {
+        Picker(strings.driver, selection: selection) {
             ForEach(model.progression.drivers) { Text($0.driver.familyName).tag($0.driver.id) }
         }
         .pickerStyle(.menu)
@@ -146,6 +173,7 @@ struct Card<Content: View>: View {
 /// Cumulative points per round. Series are direct-labelled by the legend and the selection readout, so
 /// identity never relies on colour alone.
 struct ProgressionChart: View {
+    @Environment(\.strings) private var strings
     let rounds: [Int]
     let drivers: [DriverProgression]
     var height: CGFloat = 240
@@ -185,7 +213,7 @@ struct ProgressionChart: View {
         .chartXSelection(value: $selectedRound)
         .chartXAxis { AxisMarks(values: .automatic(desiredCount: 8)) { value in
             AxisGridLine().foregroundStyle(ApexColor.kerb)
-            AxisValueLabel { if let r = value.as(Int.self) { Text("M\(r)") } }
+            AxisValueLabel { if let r = value.as(Int.self) { Text(strings.roundShort(r)) } }
         } }
         .chartYAxis { AxisMarks(position: .leading, values: .automatic(desiredCount: 4)) {
             AxisGridLine().foregroundStyle(ApexColor.kerb)
@@ -194,7 +222,7 @@ struct ProgressionChart: View {
         .chartLegend(.hidden)
         .frame(height: height)
         .padding(.trailing, 28)
-        .accessibilityLabel("Évolution des points sur \(rounds.count) manches")
+        .accessibilityLabel(strings.chartDescription(rounds.count))
     }
 
     private var legend: some View {
@@ -214,11 +242,11 @@ struct ProgressionChart: View {
             .map { (code: $0.element.driver.code, color: ChartPalette.colors[$0.offset % ChartPalette.colors.count], points: $0.element.cumulativePoints[index]) }
             .sorted { $0.points > $1.points }
         return VStack(alignment: .leading, spacing: 2) {
-            Text("APRÈS LA MANCHE \(round)").font(ApexFont.label).foregroundStyle(ApexColor.telemetry)
+            Text(strings.afterRound(round)).font(ApexFont.label).foregroundStyle(ApexColor.telemetry)
             ForEach(rows, id: \.code) { row in
                 HStack(spacing: 6) {
                     RoundedRectangle(cornerRadius: 2).fill(row.color).frame(width: 10, height: 10)
-                    Text("\(row.code)  \(Format.points(row.points)) pts").font(.caption)
+                    Text("\(row.code)  \(Format.points(row.points)) \(strings.pts)").font(.caption)
                 }
             }
         }
@@ -228,11 +256,12 @@ struct ProgressionChart: View {
 }
 
 private struct LeaderCard: View {
+    @Environment(\.strings) private var strings
     let board: LeaderBoard
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(board.category.title.uppercased()).font(ApexFont.label).foregroundStyle(ApexColor.telemetry)
+            Text(strings.leader(board.category).uppercased()).font(ApexFont.label).foregroundStyle(ApexColor.telemetry)
             if board.entries.isEmpty { Text("—").font(ApexFont.title) }
             ForEach(Array(board.entries.enumerated()), id: \.element.id) { index, entry in
                 NavigationLink(value: AppRoute.driver(id: entry.driver.id)) {
@@ -253,6 +282,7 @@ private struct LeaderCard: View {
 }
 
 private struct DuelTable: View {
+    @Environment(\.strings) private var strings
     let duel: HeadToHead
 
     private struct Metric: Identifiable {
@@ -268,17 +298,17 @@ private struct DuelTable: View {
     private var metrics: [Metric] {
         let a = duel.first, b = duel.second
         return [
-            Metric(label: "Points", first: a.points, second: b.points, format: Format.points),
-            Metric(label: "Devant en course", first: Double(a.racesAhead), second: Double(b.racesAhead)),
-            Metric(label: "Devant au départ", first: Double(a.startsAhead), second: Double(b.startsAhead)),
-            Metric(label: "Victoires", first: Double(a.wins), second: Double(b.wins)),
-            Metric(label: "Podiums", first: Double(a.podiums), second: Double(b.podiums)),
-            Metric(label: "Poles", first: Double(a.poles), second: Double(b.poles)),
-            Metric(label: "Meilleur résultat", first: a.bestFinish.map(Double.init), second: b.bestFinish.map(Double.init),
+            Metric(label: strings.statPoints, first: a.points, second: b.points, format: Format.points),
+            Metric(label: strings.aheadInRace, first: Double(a.racesAhead), second: Double(b.racesAhead)),
+            Metric(label: strings.aheadOnGrid, first: Double(a.startsAhead), second: Double(b.startsAhead)),
+            Metric(label: strings.statWins, first: Double(a.wins), second: Double(b.wins)),
+            Metric(label: strings.statPodiums, first: Double(a.podiums), second: Double(b.podiums)),
+            Metric(label: strings.statPoles, first: Double(a.poles), second: Double(b.poles)),
+            Metric(label: strings.bestFinish, first: a.bestFinish.map(Double.init), second: b.bestFinish.map(Double.init),
                    lowerIsBetter: true, bars: false, format: { "P\(Int($0))" }),
-            Metric(label: "Arrivée moyenne", first: a.averageFinish, second: b.averageFinish,
+            Metric(label: strings.averageFinish, first: a.averageFinish, second: b.averageFinish,
                    lowerIsBetter: true, bars: false, format: { String(format: "%.1f", $0) }),
-            Metric(label: "Abandons", first: Double(a.dnfs), second: Double(b.dnfs), lowerIsBetter: true),
+            Metric(label: strings.retirements, first: Double(a.dnfs), second: Double(b.dnfs), lowerIsBetter: true),
         ]
     }
 
@@ -286,7 +316,7 @@ private struct DuelTable: View {
         VStack(spacing: 10) {
             HStack {
                 name(duel.first, alignment: .leading)
-                Text("\(duel.sharedRaces) GP").font(ApexFont.label).foregroundStyle(ApexColor.telemetry)
+                Text(strings.sharedRaces(duel.sharedRaces)).font(ApexFont.label).foregroundStyle(ApexColor.telemetry)
                 name(duel.second, alignment: .trailing)
             }
             ForEach(metrics) { metric in row(metric) }
@@ -335,6 +365,53 @@ private struct DuelTable: View {
             RoundedRectangle(cornerRadius: 3).fill(color)
                 .frame(width: proxy.size.width * fraction)
                 .frame(maxWidth: .infinity, alignment: fromTrailing ? .trailing : .leading)
+        }
+    }
+}
+
+/// The hand-kept retirement record of the season: one bar per driver, with the Grands Prix.
+private struct RetirementsTable: View {
+    @Environment(\.strings) private var strings
+    let record: SeasonRetirements
+    /// This season's drivers, to open a driver page from a family name.
+    let drivers: [DriverProgression]
+
+    var body: some View {
+        let maximum = max(1, record.drivers.map(\.count).max() ?? 1)
+        VStack(alignment: .leading, spacing: 10) {
+            ForEach(record.drivers) { entry in
+                let id = drivers.first { $0.driver.familyName.matchesSearch(entry.driver) && entry.driver.matchesSearch($0.driver.familyName) }?.driver.id
+                NavigationLink(value: id.map { AppRoute.driver(id: $0) }) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack(spacing: 8) {
+                            Text(entry.driver).font(.subheadline.weight(.semibold)).frame(width: 96, alignment: .leading)
+                            GeometryReader { proxy in
+                                ZStack(alignment: .leading) {
+                                    RoundedRectangle(cornerRadius: 3).fill(ApexColor.carbonRaised)
+                                    RoundedRectangle(cornerRadius: 3).fill(Color.red)
+                                        .frame(width: proxy.size.width * Double(entry.count) / Double(maximum))
+                                }
+                            }
+                            .frame(height: 6)
+                            Text("\(entry.count)").font(.subheadline.weight(.bold)).frame(width: 28, alignment: .trailing)
+                        }
+                        Text(entry.retirements.map { $0.label(strings.language) }.joined(separator: ", "))
+                            .font(.caption).foregroundStyle(ApexColor.telemetry)
+                    }
+                }
+                .buttonStyle(.plain)
+                .disabled(id == nil)
+            }
+            if !record.noRetirement.isEmpty {
+                Text(strings.noRetirement(record.noRetirement.joined(separator: ", "))).font(.caption).foregroundStyle(ApexColor.racingRed)
+            }
+            if !record.nonStarters.isEmpty {
+                Text(strings.nonStarters + record.nonStarters.map { starts in
+                    "\(starts.driver) (\(starts.grandsPrix.map { SeasonRetirementsRecord.grandPrixName($0, strings.language) }.joined(separator: ", ")))"
+                }.joined(separator: ", "))
+                .font(.caption).foregroundStyle(ApexColor.telemetry)
+            }
+            Text(strings.retirementLegend).font(.caption2).foregroundStyle(ApexColor.telemetry)
         }
     }
 }
