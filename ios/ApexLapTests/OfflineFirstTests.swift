@@ -1,3 +1,4 @@
+import ApexLapDomain
 @testable import ApexLap
 import ApexLapData
 import XCTest
@@ -10,7 +11,7 @@ final class OfflineFirstTests: XCTestCase {
         await loader.load(cached: { [1, 2, 3] }, refresh: { throw NetworkError.offline })
 
         XCTAssertEqual(loader.value, [1, 2, 3])
-        XCTAssertEqual(loader.error, "Hors ligne — affichage des données en cache")
+        XCTAssertEqual(loader.error, I18n.strings.offlineCached)
         XCTAssertFalse(loader.isRefreshing)
     }
 
