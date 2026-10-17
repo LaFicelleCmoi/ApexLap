@@ -3,6 +3,7 @@ import SwiftUI
 
 struct CalendarView: View {
     @Environment(\.repository) private var repository
+    @Environment(\.strings) private var strings
     @State private var model = CalendarViewModel()
 
     var body: some View {
@@ -10,7 +11,7 @@ struct CalendarView: View {
             if model.races.isEmpty && model.calendar.isRefreshing {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if model.races.isEmpty {
-                EmptyStateView(message: model.calendar.error ?? "Aucun Grand Prix pour \(model.season)") {
+                EmptyStateView(message: model.calendar.error ?? strings.noGrandPrix(model.season)) {
                     Task { await model.refresh(using: repository) }
                 }
             } else {
@@ -18,10 +19,18 @@ struct CalendarView: View {
             }
         }
         .background(ApexColor.asphalt)
-        .navigationTitle("Saison \(String(model.season))")
+        .navigationTitle(strings.seasonTitle(model.season))
         .toolbar {
-            NavigationLink(value: AppRoute.reminders) {
-                Image(systemName: "bell.badge").accessibilityLabel("Rappels et widget")
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                NavigationLink(value: AppRoute.encyclopedia) {
+                    Image(systemName: "book").accessibilityLabel(strings.encyclopedia)
+                }
+                NavigationLink(value: AppRoute.reminders) {
+                    Image(systemName: "bell.badge").accessibilityLabel(strings.remindersAndWidget)
+                }
+                NavigationLink(value: AppRoute.settings) {
+                    Image(systemName: "gearshape").accessibilityLabel(strings.settings)
+                }
             }
         }
         .task {
@@ -50,6 +59,10 @@ struct CalendarView: View {
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                 }
+                FavoritesCard(season: model.season)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 Section {
                     ForEach(model.races) { race in
                         NavigationLink(value: AppRoute.race(season: race.season, round: race.round)) {
@@ -58,7 +71,7 @@ struct CalendarView: View {
                         .listRowBackground(ApexColor.asphalt)
                     }
                 } header: {
-                    SectionHeader(title: "Calendrier").listRowInsets(EdgeInsets())
+                    SectionHeader(title: strings.calendar).listRowInsets(EdgeInsets())
                 }
             }
             .listStyle(.plain)
@@ -69,17 +82,18 @@ struct CalendarView: View {
 }
 
 private struct NextRaceHero: View {
+    @Environment(\.strings) private var strings
     let race: Race
     let next: UpcomingSession?
     let now: Date
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("PROCHAIN GRAND PRIX · MANCHE \(race.round)").font(ApexFont.label)
+            Text(strings.nextGrandPrix(race.round)).font(ApexFont.label)
             Text("\(Format.flag(race.circuit.country))  \(race.name)").font(ApexFont.headline)
             Text(race.circuit.name).font(.subheadline).foregroundStyle(ApexColor.telemetry)
             if let next, let start = next.session.startsAt {
-                Text("\(next.session.type.label.uppercased()) · \(Format.day(start)) \(Format.time(start))")
+                Text("\(strings.session(next.session.type).uppercased()) · \(Format.day(start)) \(Format.time(start))")
                     .font(ApexFont.label).foregroundStyle(ApexColor.telemetry)
                     .padding(.top, 10)
                 CountdownRow(countdown: CalendarLogic.countdown(to: start, now: now))
@@ -96,14 +110,15 @@ private struct NextRaceHero: View {
 }
 
 struct CountdownRow: View {
+    @Environment(\.strings) private var strings
     let countdown: Countdown
 
     var body: some View {
         HStack(spacing: 10) {
-            unit(countdown.days, "JOURS")
-            unit(countdown.hours, "H")
-            unit(countdown.minutes, "MIN")
-            unit(countdown.seconds, "SEC")
+            unit(countdown.days, strings.days)
+            unit(countdown.hours, strings.hoursShort)
+            unit(countdown.minutes, strings.minutesShort)
+            unit(countdown.seconds, strings.secondsShort)
         }
         .accessibilityElement(children: .combine)
     }
@@ -120,6 +135,7 @@ struct CountdownRow: View {
 }
 
 private struct RaceRow: View {
+    @Environment(\.strings) private var strings
     let race: Race
     let isFinished: Bool
     let isNext: Bool
@@ -142,9 +158,9 @@ private struct RaceRow: View {
                     Text(Format.shortUTCDay(day)).font(ApexFont.label)
                 }
                 if isFinished {
-                    Text("TERMINÉ").font(ApexFont.label).foregroundStyle(ApexColor.telemetry)
+                    Text(strings.finished).font(ApexFont.label).foregroundStyle(ApexColor.telemetry)
                 } else if isNext {
-                    Text("PROCHAIN").font(ApexFont.label).foregroundStyle(ApexColor.racingRed)
+                    Text(strings.next).font(ApexFont.label).foregroundStyle(ApexColor.racingRed)
                 }
             }
         }
