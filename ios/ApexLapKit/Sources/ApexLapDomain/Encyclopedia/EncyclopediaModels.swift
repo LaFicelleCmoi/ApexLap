@@ -94,12 +94,22 @@ public struct DriverCount: Hashable, Sendable, Identifiable {
     public let driver: Driver
     public let count: Int
     public var id: String { driver.id }
+
+    public init(driver: Driver, count: Int) {
+        self.driver = driver
+        self.count = count
+    }
 }
 
 public struct ConstructorCount: Hashable, Sendable, Identifiable {
     public let constructor: Constructor
     public let count: Int
     public var id: String { constructor.id }
+
+    public init(constructor: Constructor, count: Int) {
+        self.constructor = constructor
+        self.count = count
+    }
 }
 
 public struct GrandPrixContext: Hashable, Sendable {
